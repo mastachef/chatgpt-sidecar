@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Offload Codex planning and repository analysis to ChatGPT without spending a Codex model turn.",
   "type": "module",
   "bin": {

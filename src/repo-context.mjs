@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { truncateMiddle } from "./utils.mjs";
 
 function runGit(cwd, args, maxChars = 30000) {
@@ -17,9 +17,10 @@ function runGit(cwd, args, maxChars = 30000) {
   }
 }
 
-function readSmallFile(root, relativePath, maxChars = 12000) {
-  const absolute = resolve(root, relativePath);
-  if (!absolute.startsWith(resolve(root))) return null;
+function readSmallFile(root, relativeFilePath, maxChars = 6000) {
+  const absolute = resolve(root, relativeFilePath);
+  const containedPath = relative(resolve(root), absolute);
+  if (containedPath.startsWith("..") || containedPath === "") return null;
   if (!existsSync(absolute)) return null;
   try {
     if (!statSync(absolute).isFile()) return null;
@@ -29,7 +30,6 @@ function readSmallFile(root, relativePath, maxChars = 12000) {
   }
 }
 
-/** @param {string} cwd */
 export function collectRepoContext(cwd) {
   const root = runGit(cwd, ["rev-parse", "--show-toplevel"], 2000) || resolve(cwd);
   const branch = runGit(root, ["branch", "--show-current"], 1000);
@@ -40,44 +40,12 @@ export function collectRepoContext(cwd) {
   const diff = runGit(root, ["diff", "--no-ext-diff", "--unified=3"], 50000);
   const stagedDiff = runGit(root, ["diff", "--cached", "--no-ext-diff", "--unified=3"], 30000);
   const recentCommits = runGit(root, ["log", "-8", "--oneline", "--decorate"], 8000);
-  const trackedFiles = runGit(root, ["ls-files"], 28000)
-    .split("\n")
-    .filter(Boolean)
-    .slice(0, 500)
-    .join("\n");
-
-  const keyFileCandidates = [
-    "AGENTS.md",
-    "README.md",
-    "README",
-    "package.json",
-    "pyproject.toml",
-    "Cargo.toml",
-    "go.mod",
-    "pom.xml",
-    "build.gradle",
-    "requirements.txt",
-    "docker-compose.yml",
-    "compose.yml"
-  ];
-
+  const trackedFiles = runGit(root, ["ls-files"], 28000).split("\n").filter(Boolean).slice(0, 500).join("\n");
+  const keyFileCandidates = ["AGENTS.md", "README.md", "README", "package.json", "pyproject.toml", "Cargo.toml", "go.mod", "pom.xml", "build.gradle", "requirements.txt", "docker-compose.yml", "compose.yml"];
   const keyFiles = {};
   for (const name of keyFileCandidates) {
     const content = readSmallFile(root, name);
     if (content != null) keyFiles[name] = content;
   }
-
-  return {
-    root,
-    branch,
-    head,
-    remote,
-    status,
-    diffStat,
-    diff,
-    stagedDiff,
-    recentCommits,
-    trackedFiles,
-    keyFiles
-  };
+  return { root, branch, head, remote, status, diffStat, diff, stagedDiff, recentCommits, trackedFiles, keyFiles };
 }

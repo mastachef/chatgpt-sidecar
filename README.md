@@ -6,30 +6,22 @@ The goal is simple: spend Codex usage primarily on editing, testing, and verific
 
 ## Current MVP
 
-Type one of these inside Codex:
+Type one of these as normal composer text inside Codex:
 
 ```text
-/gpt plan how to add account recovery
-/gpt-plan design the cleanest migration path
-/gpt-debug determine why login tests are failing
-/gpt-review
+gpt: plan how to add account recovery
+gpt-plan: design the cleanest migration path
+gpt-debug: determine why login tests are failing
+gpt-review:
 ```
 
-The plugin then:
+Do **not** type `/gpt`. Current Codex clients reject unregistered custom slash commands before `UserPromptSubmit` hooks run. The `gpt:` prefix is ordinary prompt text, so the hook can intercept and block it before the model receives it.
 
-1. Intercepts the command through a `UserPromptSubmit` hook.
-2. Reads the stored Codex conversation using `codex app-server` and `thread/read`.
-3. Captures the active Git branch, status, diffs, recent commits, tracked files, `AGENTS.md`, README, and common project manifests.
-4. Builds a structured Markdown handoff.
-5. Saves it under the plugin data directory and copies it to your clipboard.
-6. Opens ChatGPT.
-7. Blocks the original prompt so Codex does not process it as a model turn.
-
-Paste the prepared handoff into ChatGPT. ChatGPT is instructed to finish with a compact **CODEX EXECUTION PACKET** that you can paste back into Codex for implementation.
+The plugin then intercepts the prompt, reads the stored Codex conversation through App Server, gathers Git/repository context, redacts common credential patterns, saves and copies a structured handoff, opens ChatGPT, and blocks the original Codex prompt.
 
 ## Important limitation
 
-This first version is intentionally a one-way handoff. Ordinary consumer ChatGPT does not currently expose a documented local API for silently submitting into a chosen existing chat, so the MVP uses clipboard + browser focus. A fully automatic mode can later use the OpenAI API, but that is separately billed.
+This version is intentionally a one-way handoff. Ordinary consumer ChatGPT does not expose a documented local API for silently submitting into a chosen existing chat, so the MVP uses clipboard + browser focus. A fully automatic mode can later use the OpenAI API, but that is separately billed.
 
 ## Requirements
 
@@ -38,61 +30,39 @@ This first version is intentionally a one-way handoff. Ordinary consumer ChatGPT
 - A current Codex installation with App Server and plugin hooks
 - ChatGPT desktop or a browser
 
-Run:
+## Install
 
 ```bash
+codex plugin marketplace add mastachef/chatgpt-sidecar
+codex plugin add chatgpt-sidecar@mastachef-codex-plugins
+```
+
+Restart Codex or the ChatGPT desktop app after installation. Open `/hooks`, inspect this plugin's `UserPromptSubmit` hook, and trust it before testing.
+
+Then type normal composer text such as:
+
+```text
+gpt-plan: plan the next feature and identify exact files and tests
+```
+
+## Verify the local checkout
+
+```bash
+git clone https://github.com/mastachef/chatgpt-sidecar.git
+cd chatgpt-sidecar
 npm test
 node ./bin/sidecar.mjs doctor
 ```
 
-## Install from a GitHub marketplace
-
-After this repository is published:
-
-```bash
-codex plugin marketplace add mastachef/chatgpt-sidecar
-```
-
-Restart the ChatGPT desktop app, open **Plugins**, select the marketplace, install **Codex ChatGPT Sidecar**, and review/trust its hook through `/hooks`.
-
-## Local development install
-
-Clone the repository, then add its directory as a local marketplace:
-
-```bash
-codex plugin marketplace add /absolute/path/to/chatgpt-sidecar
-```
-
-Restart the desktop app and install it from the Plugins Directory. Plugin-bundled hooks are not automatically trusted; inspect and trust the hook definition before testing.
-
-## Test without installing the plugin
-
-From any Git repository:
-
-```bash
-node /path/to/chatgpt-sidecar/bin/sidecar.mjs bundle "Plan the next feature"
-```
-
-That creates a repository-only handoff, copies it to the clipboard, and opens ChatGPT.
-
 ## Privacy and safety
 
-The plugin reads the active stored Codex conversation and local repository context. Before broader release, it needs configurable secret redaction and ignore rules. Do not use the rough MVP on repositories containing credentials or material you do not want copied into ChatGPT.
+The plugin reads the active stored Codex conversation and local repository context. It applies best-effort redaction for common credentials, but no redactor is perfect. Review the generated handoff before pasting it into ChatGPT when working with sensitive repositories.
 
-Repository contents and transcript content are explicitly labeled as untrusted data in the generated handoff to reduce prompt-injection risk.
-
-## Implementation notes
-
-- `UserPromptSubmit` receives the prompt, Codex session ID, turn ID, model, and working directory.
-- Returning `{ "decision": "block" }` prevents the `/gpt*` command from reaching the Codex model.
-- `thread/read` retrieves stored thread history without resuming the thread.
-- The transcript JSONL path is deliberately not parsed because OpenAI documents it as an unstable interface.
-
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/ROADMAP.md`](docs/ROADMAP.md).
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/ROADMAP.md`](docs/ROADMAP.md), and [`docs/AUDIT.md`](docs/AUDIT.md).
 
 ## Status
 
-**Version 0.1 rough draft.** The core handoff is implemented, but it still needs real-world testing in the current Windows ChatGPT desktop/Codex environment and hardening before public promotion.
+**Version 0.2 audited rough draft.** Static contract issues and the simulated end-to-end path are covered, but a final live validation still needs to run on Windows with the current Codex desktop/CLI installed.
 
 ## License
 

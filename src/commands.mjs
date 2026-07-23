@@ -1,4 +1,11 @@
 const COMMANDS = new Map([
+  ["gpt", "general"],
+  ["gpt-plan", "plan"],
+  ["gpt-debug", "debug"],
+  ["gpt-review", "review"]
+]);
+
+const LEGACY_SLASH_COMMANDS = new Map([
   ["/gpt", "general"],
   ["/gpt-plan", "plan"],
   ["/gpt-debug", "debug"],
@@ -6,20 +13,41 @@ const COMMANDS = new Map([
 ]);
 
 /**
+ * Parse an explicit sidecar trigger.
+ *
+ * Current Codex clients reject unknown custom slash commands before
+ * UserPromptSubmit hooks run. The supported trigger therefore uses normal
+ * composer text such as `gpt: plan auth` or `gpt-debug: failing login`.
+ * Legacy slash aliases remain parseable for direct hook tests and for any
+ * future client that forwards unknown slash commands.
+ *
  * @param {string} prompt
  * @returns {{command: string, mode: string, request: string} | null}
  */
 export function parseSidecarCommand(prompt) {
   const trimmed = String(prompt ?? "").trim();
-  if (!trimmed.startsWith("/")) return null;
+  if (!trimmed) return null;
 
-  const firstSpace = trimmed.search(/\s/);
-  const command = firstSpace === -1 ? trimmed : trimmed.slice(0, firstSpace);
-  const mode = COMMANDS.get(command.toLowerCase());
-  if (!mode) return null;
+  const colonMatch = /^(gpt(?:-(?:plan|debug|review))?)\s*:\s*([\s\S]*)$/i.exec(trimmed);
+  if (colonMatch) {
+    const command = colonMatch[1].toLowerCase();
+    return {
+      command: `${command}:`,
+      mode: COMMANDS.get(command),
+      request: colonMatch[2].trim()
+    };
+  }
 
-  const request = firstSpace === -1 ? "" : trimmed.slice(firstSpace).trim();
-  return { command: command.toLowerCase(), mode, request };
+  const legacyFirstSpace = trimmed.search(/\s/);
+  const legacyCommand = legacyFirstSpace === -1 ? trimmed : trimmed.slice(0, legacyFirstSpace);
+  const legacyMode = LEGACY_SLASH_COMMANDS.get(legacyCommand.toLowerCase());
+  if (!legacyMode) return null;
+
+  return {
+    command: legacyCommand.toLowerCase(),
+    mode: legacyMode,
+    request: legacyFirstSpace === -1 ? "" : trimmed.slice(legacyFirstSpace).trim()
+  };
 }
 
 export function modeInstruction(mode) {
