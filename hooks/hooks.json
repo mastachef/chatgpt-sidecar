@@ -1,0 +1,18 @@
+{
+  "description": "Routes /gpt commands to the ChatGPT sidecar before Codex starts a model turn.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/src/hook.mjs\"",
+            "commandWindows": "node \"%PLUGIN_ROOT%\\src\\hook.mjs\"",
+            "timeout": 20,
+            "statusMessage": "Preparing ChatGPT sidecar handoff"
+          }
+        ]
+      }
+    ]
+  }
+}
