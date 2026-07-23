@@ -1,25 +1,34 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.2.0",
-  "description": "Intercept explicit gpt: handoff prompts and send Codex conversation plus repository context to ChatGPT.",
+  "version": "0.3.0",
+  "description": "Use the Sidecar command to offload Codex planning and repository analysis to ChatGPT before a Codex model turn.",
   "author": {
     "name": "mastachef"
   },
   "repository": "https://github.com/mastachef/chatgpt-sidecar",
   "license": "MIT",
-  "keywords": ["codex", "chatgpt", "planning", "context", "sidecar"],
+  "keywords": [
+    "codex",
+    "chatgpt",
+    "planning",
+    "context",
+    "sidecar"
+  ],
   "interface": {
     "displayName": "Codex ChatGPT Sidecar",
     "shortDescription": "Send Codex planning work to ChatGPT",
-    "longDescription": "Intercepts explicit gpt: prompts before a Codex model turn, gathers the active Codex thread and Git repository context, and opens a prepared handoff in ChatGPT.",
+    "longDescription": "Provides a Sidecar skill and hook that gather the active Codex thread and repository context, open a prepared ChatGPT handoff, and block the Codex model turn.",
     "developerName": "mastachef",
     "category": "Developer Tools",
-    "capabilities": ["Read"],
+    "capabilities": [
+      "Read"
+    ],
     "websiteURL": "https://github.com/mastachef/chatgpt-sidecar",
     "defaultPrompt": [
-      "gpt: plan the safest implementation for the next requested feature",
-      "gpt-debug: diagnose the current failure without changing files",
-      "gpt-review: review the current working tree and staged changes"
+      "$sidecar plan the safest implementation for the next requested feature",
+      "$sidecar debug the current failure without changing files",
+      "$sidecar review the current working tree and staged changes"
     ]
-  }
+  },
+  "skills": "./skills/"
 }

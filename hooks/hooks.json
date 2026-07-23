@@ -1,5 +1,5 @@
 {
-  "description": "Routes explicit gpt: handoff prompts to ChatGPT before Codex starts a model turn.",
+  "description": "Routes explicit Sidecar skill, prompt-alias, and fallback triggers to ChatGPT before Codex starts a model turn.",
   "hooks": {
     "UserPromptSubmit": [
       {

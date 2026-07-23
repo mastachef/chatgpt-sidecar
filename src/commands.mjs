@@ -1,53 +1,55 @@
-const COMMANDS = new Map([
-  ["gpt", "general"],
-  ["gpt-plan", "plan"],
-  ["gpt-debug", "debug"],
-  ["gpt-review", "review"]
+const MODE_WORDS = new Map([
+  ["plan", "plan"],
+  ["debug", "debug"],
+  ["review", "review"]
 ]);
 
-const LEGACY_SLASH_COMMANDS = new Map([
-  ["/gpt", "general"],
-  ["/gpt-plan", "plan"],
-  ["/gpt-debug", "debug"],
-  ["/gpt-review", "review"]
-]);
+function parseRequest(raw) {
+  const text = String(raw ?? "").trim();
+  const match = /^(plan|debug|review)(?:(?:\s+|:\s*)([\s\S]*))?$/i.exec(text);
+  if (!match) return { mode: "general", request: text };
+  return {
+    mode: MODE_WORDS.get(match[1].toLowerCase()),
+    request: (match[2] || "").trim()
+  };
+}
 
-/**
- * Parse an explicit sidecar trigger.
- *
- * Current Codex clients reject unknown custom slash commands before
- * UserPromptSubmit hooks run. The supported trigger therefore uses normal
- * composer text such as `gpt: plan auth` or `gpt-debug: failing login`.
- * Legacy slash aliases remain parseable for direct hook tests and for any
- * future client that forwards unknown slash commands.
- *
- * @param {string} prompt
- * @returns {{command: string, mode: string, request: string} | null}
- */
 export function parseSidecarCommand(prompt) {
   const trimmed = String(prompt ?? "").trim();
   if (!trimmed) return null;
 
-  const colonMatch = /^(gpt(?:-(?:plan|debug|review))?)\s*:\s*([\s\S]*)$/i.exec(trimmed);
-  if (colonMatch) {
-    const command = colonMatch[1].toLowerCase();
-    return {
-      command: `${command}:`,
-      mode: COMMANDS.get(command),
-      request: colonMatch[2].trim()
-    };
+  const skillMatch = /^\$sidecar(?:\s+([\s\S]*))?$/i.exec(trimmed);
+  if (skillMatch) {
+    const parsed = parseRequest(skillMatch[1] || "");
+    return { command: "$sidecar", ...parsed };
   }
 
-  const legacyFirstSpace = trimmed.search(/\s/);
-  const legacyCommand = legacyFirstSpace === -1 ? trimmed : trimmed.slice(0, legacyFirstSpace);
-  const legacyMode = LEGACY_SLASH_COMMANDS.get(legacyCommand.toLowerCase());
-  if (!legacyMode) return null;
+  const markerMatch = /^SIDECAR_HANDOFF\s*:\s*([\s\S]*)$/i.exec(trimmed);
+  if (markerMatch) {
+    const parsed = parseRequest(markerMatch[1]);
+    return { command: "/prompts:sidecar", ...parsed };
+  }
 
-  return {
-    command: legacyCommand.toLowerCase(),
-    mode: legacyMode,
-    request: legacyFirstSpace === -1 ? "" : trimmed.slice(legacyFirstSpace).trim()
-  };
+  const textMatch = /^sidecar\s*:\s*([\s\S]*)$/i.exec(trimmed);
+  if (textMatch) {
+    const parsed = parseRequest(textMatch[1]);
+    return { command: "sidecar:", ...parsed };
+  }
+
+  const futureSlashMatch = /^\/sidecar(?:\s+([\s\S]*))?$/i.exec(trimmed);
+  if (futureSlashMatch) {
+    const parsed = parseRequest(futureSlashMatch[1] || "");
+    return { command: "/sidecar", ...parsed };
+  }
+
+  const legacyMatch = /^(gpt(?:-(?:plan|debug|review))?)\s*:\s*([\s\S]*)$/i.exec(trimmed);
+  if (legacyMatch) {
+    const legacy = legacyMatch[1].toLowerCase();
+    const mode = legacy === "gpt-plan" ? "plan" : legacy === "gpt-debug" ? "debug" : legacy === "gpt-review" ? "review" : "general";
+    return { command: `${legacy}:`, mode, request: legacyMatch[2].trim() };
+  }
+
+  return null;
 }
 
 export function modeInstruction(mode) {

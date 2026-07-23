@@ -82,7 +82,7 @@ export async function readCodexThread(threadId, options = {}) {
         clientInfo: {
           name: "codex_chatgpt_sidecar",
           title: "Codex ChatGPT Sidecar",
-          version: "0.2.0"
+          version: "0.3.0"
         }
       }
     });
