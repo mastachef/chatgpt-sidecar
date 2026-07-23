@@ -1,0 +1,25 @@
+{
+  "name": "chatgpt-sidecar",
+  "version": "0.1.0",
+  "description": "Offload Codex planning and repository analysis to ChatGPT without spending a Codex model turn.",
+  "type": "module",
+  "bin": {
+    "codex-sidecar": "./bin/sidecar.mjs"
+  },
+  "scripts": {
+    "test": "node --test",
+    "doctor": "node ./bin/sidecar.mjs doctor",
+    "bundle": "node ./bin/sidecar.mjs bundle"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "codex",
+    "chatgpt",
+    "plugin",
+    "sidecar",
+    "developer-tools"
+  ],
+  "license": "MIT"
+}
