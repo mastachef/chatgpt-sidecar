@@ -12,7 +12,7 @@ jobs:
   native-diagnostic:
     runs-on: windows-latest
     steps:
-      - name: Build Sidecar and print concise failures
+      - name: Build and test Sidecar with concise failures
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Continue'
@@ -22,16 +22,28 @@ jobs:
           git fetch --quiet --depth 1 origin $env:GITHUB_REF
           git checkout --quiet FETCH_HEAD
 
-          $log = Join-Path $env:RUNNER_TEMP 'sidecar-native-build.log'
-          dotnet build apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --verbosity:minimal *> $log
-          $status = $LASTEXITCODE
-          if ($status -ne 0) {
+          $buildLog = Join-Path $env:RUNNER_TEMP 'sidecar-native-build.log'
+          dotnet build apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --verbosity:minimal *> $buildLog
+          $buildStatus = $LASTEXITCODE
+          if ($buildStatus -ne 0) {
             Write-Host '=== NATIVE BUILD FAILURE ==='
-            Get-Content $log |
+            Get-Content $buildLog |
               Select-String -Pattern ': error |error CS|error MSB|error NETSDK|Build FAILED|warning CS' -Context 0,2 |
               ForEach-Object { $_.ToString() }
             Write-Host '=== END NATIVE BUILD FAILURE ==='
-            exit $status
+            exit $buildStatus
           }
 
-          Get-Content $log | Select-Object -Last 20
+          $testLog = Join-Path $env:RUNNER_TEMP 'sidecar-native-test.log'
+          dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release --verbosity:minimal *> $testLog
+          $testStatus = $LASTEXITCODE
+          if ($testStatus -ne 0) {
+            Write-Host '=== NATIVE TEST FAILURE ==='
+            Get-Content $testLog |
+              Select-String -Pattern '^\s*Failed |\[FAIL\]|Error Message:|Stack Trace:|Assert\.|Expected:|Actual:|Failed!|error CS|error MSB|error NETSDK' -Context 0,6 |
+              ForEach-Object { $_.ToString() }
+            Write-Host '=== END NATIVE TEST FAILURE ==='
+            exit $testStatus
+          }
+
+          Get-Content $testLog | Select-Object -Last 20
