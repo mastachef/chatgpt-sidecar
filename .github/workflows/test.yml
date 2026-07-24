@@ -7,15 +7,30 @@ on:
 jobs:
   node-test:
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          show-progress: false
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm test
+      - name: Run Node tests with compact diagnostics
+        shell: bash
+        run: |
+          set +e
+          npm test > node-test.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "=== NODE TEST FAILURE ==="
+            tail -n 120 node-test.log
+            echo "=== END NODE TEST FAILURE ==="
+            exit "$status"
+          fi
+          tail -n 30 node-test.log
       - run: node --check bin/sidecar.mjs
       - run: node --check bin/sidecar-quickchat.mjs
       - run: node --check bin/install-quickchat.mjs
