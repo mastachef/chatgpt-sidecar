@@ -88,9 +88,10 @@ internal sealed class UpdateService
                     continue;
                 }
 
+                var normalizedTag = tag!.Trim();
                 return new SidecarUpdate(
-                    tag ?? available.ToString(),
-                    (tag ?? string.Empty).TrimStart('v', 'V'),
+                    normalizedTag,
+                    normalizedTag.TrimStart('v', 'V'),
                     new Uri(downloadUrl),
                     sha256.ToLowerInvariant(),
                     new Uri(releaseUrl));
