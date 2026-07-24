@@ -4,9 +4,23 @@
 
 **Preserve precious Codex usage by offloading planning, debugging, code review, and repository analysis to ChatGPT—then return the finished work to Codex as a detailed implementation handoff.**
 
-Sidecar is a native Windows companion for the ChatGPT/Codex desktop app. It attaches beside the exact Codex window you choose, reads a selected saved Codex conversation and bounded repository context locally, and prepares that context inside an embedded ChatGPT session without submitting another prompt to the Codex thread.
+Sidecar is a native Windows companion for the ChatGPT/Codex desktop app. It stays put until you manually attach it to the exact Codex window you choose, reads a selected saved Codex conversation and bounded repository context locally, and prepares that context inside an embedded ChatGPT session without submitting another prompt to the Codex thread.
 
 > **Current release: v0.8.1-alpha.5**
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/sidecar-context.svg" width="460" alt="Sidecar Codex context controls and embedded ChatGPT panel" />
+</p>
+
+<p align="center"><em>Codex context selection, request controls, preview, ChatGPT preparation, and the embedded ChatGPT workspace.</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/sidecar-full.svg" width="300" alt="Full Sidecar Windows interface" />
+</p>
+
+<p align="center"><em>Full Sidecar companion window in a dark Codex-style theme.</em></p>
 
 ## The workflow
 
@@ -16,7 +30,7 @@ Codex context → Sidecar/ChatGPT planning → detailed Codex handoff → Codex 
 
 1. Open the Codex project and conversation you are working on.
 2. Run `Sidecar.exe` and sign into ChatGPT inside Sidecar.
-3. Drag **Attach** over the real Codex window and release.
+3. Drag **Attach** over the exact Codex window and release.
 4. Select the correct saved root Codex thread.
 5. Enter a Plan, Debug, Review, or General request.
 6. Select **Preview**, then **Prepare in ChatGPT**, review the populated message, and send it.
@@ -28,7 +42,7 @@ Sidecar populates prompts but does **not** auto-submit them.
 
 ## Current features
 
-- **Exact drag-to-attach docking:** pins Sidecar to the Windows window you deliberately select.
+- **Manual-only docking:** Sidecar never guesses or auto-selects a window. It moves only after you drag **Attach** onto a specific window.
 - **Persistent ChatGPT session:** sign in once through the embedded WebView2 browser.
 - **Codex context reader:** choose recent saved root Codex conversations; subagent rollouts are excluded.
 - **Repository context:** bounded Git status, staged and unstaged diffs, recent commits, instructions, manifests, and referenced files.
