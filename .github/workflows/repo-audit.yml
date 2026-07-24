@@ -1,0 +1,35 @@
+name: Repository Audit
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Inventory tracked files and releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== FILE INVENTORY ==='
+          git ls-files | while IFS= read -r file; do
+            bytes=$(wc -c < "$file" | tr -d ' ')
+            printf '%10s  %s\n' "$bytes" "$file"
+          done | sort -k2
+          echo '=== RELEASES ==='
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 20 --json tagName,name,isLatest,isPrerelease,publishedAt
+          echo '=== RELEASE ASSETS ==='
+          for tag in $(gh release list --repo "$GITHUB_REPOSITORY" --limit 20 --json tagName --jq '.[].tagName'); do
+            echo "--- $tag ---"
+            gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json tagName,name,publishedAt,assets --jq '{tagName,name,publishedAt,assets:[.assets[]|{name,size,digest,downloadCount}]}'
+          done
