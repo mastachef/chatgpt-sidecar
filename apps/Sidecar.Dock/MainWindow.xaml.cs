@@ -137,7 +137,9 @@ public partial class MainWindow : Window
         var workingDirectory = Directory.Exists(session.WorkingDirectory)
             ? session.WorkingDirectory!
             : Environment.CurrentDirectory;
-        var repository = _repositoryCollector.Collect(workingDirectory);
+        var repository = _repositoryCollector.Collect(
+            workingDirectory,
+            session.Messages.Select(message => message.Text));
         var request = RequestBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(request))
         {
