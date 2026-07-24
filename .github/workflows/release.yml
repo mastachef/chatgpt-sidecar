@@ -98,12 +98,12 @@ jobs:
 
           ### Changes
 
-          - fixed invisible selected text and popup text in dark-theme dropdowns
-          - added **Prepare handoff** to ask ChatGPT for a detailed, implementation-ready Codex prompt
-          - added **Copy latest reply** to copy the completed handoff back to Codex
-          - handoff includes decisions, repository state, exact files, ordered steps, constraints, errors, tests, unresolved questions, and the first next action
-          - locked the EXE, taskbar, title-bar, and in-app icon to the exact supplied Sidecar car artwork
-          - retained exact drag-to-attach window targeting, saved Codex themes, context preview, secret filtering, and populate-only safety
+          - replaced the stock Windows title bar with fully themed Sidecar window chrome
+          - title bar background, car icon, title text, minimize/maximize/close controls, and border now follow the selected theme
+          - double-click title bar to maximize/restore and drag it normally to move Sidecar
+          - preserved Windows resizing through WPF ``WindowChrome``
+          - retained the alpha.5 dark-dropdown fixes and return-to-Codex handoff workflow
+          - retained exact manual drag-to-attach docking, context preview, secret filtering, and populate-only safety
 
           Sidecar populates prompts but does not auto-submit them.
           "@ | Set-Content artifacts/release-notes.md
