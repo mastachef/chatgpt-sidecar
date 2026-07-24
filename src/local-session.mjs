@@ -40,6 +40,27 @@ function addMessage(messages, role, text, timestamp) {
   messages.push({ role, text: clean, timestamp: timestamp || null });
 }
 
+function sessionTitle(messages) {
+  const firstUserMessage = messages.find((message) => message.role === "user")?.text || "Untitled Codex conversation";
+  const oneLine = firstUserMessage.replace(/\s+/g, " ").trim();
+  return oneLine.length > 120 ? `${oneLine.slice(0, 117)}...` : oneLine;
+}
+
+function sessionCandidates(codexHome, maxCandidates = 250) {
+  const sessionsRoot = join(codexHome, "sessions");
+  return collectJsonlFiles(sessionsRoot)
+    .map((path) => {
+      try {
+        return { path, mtimeMs: statSync(path).mtimeMs };
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.mtimeMs - a.mtimeMs)
+    .slice(0, maxCandidates);
+}
+
 export function parseCodexRollout(path) {
   const raw = readFileSync(path, "utf8");
   const messages = [];
@@ -82,12 +103,17 @@ export function parseCodexRollout(path) {
 
   const stats = statSync(path);
   const sessionId = meta.session_id || meta.id || null;
+  const threadId = meta.id || sessionId;
   const parentThreadId = meta.parent_thread_id || null;
   const agentRole = meta.agent_role || null;
   const isSubagent = Boolean(parentThreadId || agentRole);
+  const title = sessionTitle(messages);
+
   return {
     path,
     sessionId,
+    threadId,
+    title,
     parentThreadId,
     agentRole,
     isSubagent,
@@ -96,10 +122,12 @@ export function parseCodexRollout(path) {
     originator: meta.originator || null,
     startedAt: meta.timestamp || null,
     updatedAt: stats.mtime.toISOString(),
+    messageCount: messages.length,
     git,
     thread: {
-      id: meta.id || sessionId,
+      id: threadId,
       sessionId,
+      title,
       parentThreadId,
       agentRole,
       cwd: meta.cwd || null,
@@ -113,32 +141,45 @@ export function parseCodexRollout(path) {
   };
 }
 
-/**
- * Read the newest saved Codex rollout directly from CODEX_HOME without starting
- * Codex App Server, a thread, or a model turn. Root sessions are preferred over
- * newer subagent rollouts so the handoff tracks the user's visible Codex chat.
- */
-export function findLatestCodexSession(options = {}) {
+export function listRecentCodexSessions(options = {}) {
   const codexHome = options.codexHome;
   if (!codexHome) throw new Error("codexHome is required");
-  const sessionsRoot = join(codexHome, "sessions");
   const requestedCwd = options.cwd ? normalizedPath(options.cwd) : null;
+  const includeSubagents = options.includeSubagents === true;
+  const limit = Math.max(1, Math.min(Number(options.limit) || 10, 50));
+  const sessions = [];
+  const seen = new Set();
 
-  const candidates = collectJsonlFiles(sessionsRoot)
-    .map((path) => {
-      try {
-        return { path, mtimeMs: statSync(path).mtimeMs };
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.mtimeMs - a.mtimeMs)
-    .slice(0, options.maxCandidates || 250);
+  for (const candidate of sessionCandidates(codexHome, options.maxCandidates || 300)) {
+    let parsed;
+    try {
+      parsed = parseCodexRollout(candidate.path);
+    } catch {
+      continue;
+    }
+    if (!parsed.thread.messages.length) continue;
+    if (!includeSubagents && parsed.isSubagent) continue;
+    if (requestedCwd && (!parsed.cwd || normalizedPath(parsed.cwd) !== requestedCwd)) continue;
 
+    const key = parsed.threadId || parsed.sessionId || parsed.path;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    sessions.push(parsed);
+    if (sessions.length >= limit) break;
+  }
+
+  return sessions;
+}
+
+export function findCodexSession(options = {}) {
+  const codexHome = options.codexHome;
+  if (!codexHome) throw new Error("codexHome is required");
+  const requestedId = String(options.sessionId || options.threadId || "").trim();
+  const requestedCwd = options.cwd ? normalizedPath(options.cwd) : null;
   let newestRoot = null;
   let newestAny = null;
-  for (const candidate of candidates) {
+
+  for (const candidate of sessionCandidates(codexHome, options.maxCandidates || 300)) {
     let parsed;
     try {
       parsed = parseCodexRollout(candidate.path);
@@ -149,10 +190,19 @@ export function findLatestCodexSession(options = {}) {
     if (!newestAny) newestAny = parsed;
     if (!parsed.isSubagent && !newestRoot) newestRoot = parsed;
 
-    if (requestedCwd && parsed.cwd && normalizedPath(parsed.cwd) === requestedCwd) {
-      if (!parsed.isSubagent) return parsed;
-    }
-    if (!requestedCwd && !parsed.isSubagent) return parsed;
+    if (requestedId && (parsed.sessionId === requestedId || parsed.threadId === requestedId)) return parsed;
+    if (requestedCwd && parsed.cwd && normalizedPath(parsed.cwd) === requestedCwd && !parsed.isSubagent) return parsed;
+    if (!requestedId && !requestedCwd && !parsed.isSubagent) return parsed;
   }
+
   return newestRoot || newestAny;
+}
+
+/**
+ * Read the newest saved Codex rollout directly from CODEX_HOME without starting
+ * Codex App Server, a thread, or a model turn. Root sessions are preferred over
+ * newer subagent rollouts so the handoff tracks the user's visible Codex chat.
+ */
+export function findLatestCodexSession(options = {}) {
+  return findCodexSession(options);
 }
