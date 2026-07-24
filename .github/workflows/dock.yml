@@ -14,13 +14,15 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          show-progress: false
-      - name: Restore and build with compact diagnostics
+      - name: Build with compact diagnostics
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Continue'
+          git init source | Out-Null
+          Set-Location source
+          git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
+          git fetch --quiet --depth 1 origin $env:GITHUB_REF
+          git checkout --quiet FETCH_HEAD
           $project = 'apps/Sidecar.Dock/Sidecar.Dock.csproj'
           $log = Join-Path $env:RUNNER_TEMP 'sidecar-build.log'
           dotnet restore $project *> $log
@@ -34,9 +36,3 @@ jobs:
             exit 1
           }
           Get-Content $log | Select-Object -Last 20
-      - name: Publish portable alpha
-        run: dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -o artifacts/Sidecar.Dock-win-x64
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Sidecar.Dock-win-x64
-          path: artifacts/Sidecar.Dock-win-x64
