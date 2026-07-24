@@ -2,6 +2,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
 using ChatGPT.Sidecar.Dock.Diagnostics;
+using ChatGPT.Sidecar.Dock.UI;
 
 namespace ChatGPT.Sidecar.Dock;
 
@@ -31,6 +32,8 @@ public partial class App : Application
         {
             base.OnStartup(e);
             ShutdownMode = ShutdownMode.OnMainWindowClose;
+            ThemeManager.ApplySavedTheme();
+            _startupReporter.Record("theme.applied", ("theme", ThemeManager.CurrentThemeId));
 
             var window = new MainWindow();
             _startupReporter.Record("main_window.constructed");
@@ -95,7 +98,7 @@ public partial class App : Application
         {
             MessageBox.Show(
                 _startupReporter.BuildFailureMessage(stage),
-                "ChatGPT Sidecar startup failure",
+                "Sidecar startup failure",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
