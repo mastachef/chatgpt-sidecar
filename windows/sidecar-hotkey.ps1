@@ -48,7 +48,7 @@ public static class SidecarHotkeyNative {
     public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
     [DllImport("user32.dll")]
-    public static extern sbyte GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
+    public static extern int GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
 }
 "@
 } catch {
@@ -77,7 +77,7 @@ try {
   Write-SidecarHotkeyLog 'Registered Ctrl+Alt+S successfully.'
 
   while ($true) {
-    $message = New-Object SidecarHotkeyNative+MSG
+    $message = [SidecarHotkeyNative+MSG]::new()
     $result = [SidecarHotkeyNative]::GetMessage([ref]$message, [IntPtr]::Zero, 0, 0)
     if ($result -le 0) { break }
 
