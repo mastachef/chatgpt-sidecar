@@ -1,4 +1,5 @@
 using ChatGPT.Sidecar.Dock.CodexContext;
+using Xunit;
 
 namespace ChatGPT.Sidecar.Dock.Tests;
 
