@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using ChatGPT.Sidecar.Dock.Browser;
 using ChatGPT.Sidecar.Dock.CodexContext;
 using ChatGPT.Sidecar.Dock.Diagnostics;
@@ -19,6 +20,7 @@ public partial class MainWindow : Window
     private readonly DockController _dockController;
     private readonly ChatGptWebViewController _chatGptController;
     private string? _latestContextPackage;
+    private bool _isAttachDrag;
 
     public MainWindow()
     {
@@ -31,6 +33,7 @@ public partial class MainWindow : Window
             StatusText.Text = status;
             _diagnostics.Record("dock.status", ("status", status));
         });
+        _dockController.TargetChanged += (_, target) => Dispatcher.Invoke(() => DockTargetText.Text = target);
         _chatGptController.StatusChanged += (_, status) => Dispatcher.Invoke(() => BrowserStatusText.Text = status);
         Loaded += MainWindow_OnLoaded;
         Closed += (_, _) =>
@@ -232,11 +235,90 @@ public partial class MainWindow : Window
         return Path.GetFileName(normalized) is { Length: > 0 } name ? name : normalized;
     }
 
+    private void AttachTargetHandle_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        _isAttachDrag = true;
+        AttachTargetHandle.Opacity = 0.55;
+        AttachTargetHandle.CaptureMouse();
+        StatusText.Text = "Drag the Attach handle over the real Codex window and release.";
+        _diagnostics.Record("dock.attach.drag.started");
+        e.Handled = true;
+    }
+
+    private void AttachTargetHandle_OnMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_isAttachDrag && e.LeftButton != MouseButtonState.Pressed)
+        {
+            CancelAttachDrag("Attach cancelled.");
+        }
+    }
+
+    private void AttachTargetHandle_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_isAttachDrag)
+        {
+            return;
+        }
+
+        _isAttachDrag = false;
+        AttachTargetHandle.Opacity = 1.0;
+        AttachTargetHandle.ReleaseMouseCapture();
+
+        var attached = _dockController.TryAttachAtCursor(out var result);
+        if (attached)
+        {
+            FollowCodexToggle.IsChecked = true;
+            _dockController.IsFollowing = true;
+            StatusText.Text = result;
+        }
+        else
+        {
+            StatusText.Text = result;
+        }
+
+        _diagnostics.Record("dock.attach.drag.completed", ("success", attached));
+        e.Handled = true;
+    }
+
+    private void AttachTargetHandle_OnLostMouseCapture(object sender, MouseEventArgs e)
+    {
+        if (_isAttachDrag)
+        {
+            CancelAttachDrag("Attach cancelled before a target was selected.");
+        }
+    }
+
+    private void CancelAttachDrag(string status)
+    {
+        _isAttachDrag = false;
+        AttachTargetHandle.Opacity = 1.0;
+        if (AttachTargetHandle.IsMouseCaptured)
+        {
+            AttachTargetHandle.ReleaseMouseCapture();
+        }
+
+        StatusText.Text = status;
+        _diagnostics.Record("dock.attach.drag.cancelled");
+    }
+
+    private void AutoTargetButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        _dockController.UseAutomaticTargeting();
+        FollowCodexToggle.IsChecked = true;
+        _dockController.IsFollowing = true;
+        _diagnostics.Record("dock.target.auto.enabled");
+    }
+
     private void FollowCodexToggle_OnChanged(object sender, RoutedEventArgs e)
     {
         _dockController.IsFollowing = FollowCodexToggle.IsChecked == true;
         _diagnostics.Record("dock.follow.changed", ("enabled", _dockController.IsFollowing));
-        StatusText.Text = _dockController.IsFollowing ? "Following Codex window" : "Sidecar detached";
+        StatusText.Text = _dockController.IsFollowing ? "Following selected target window" : "Sidecar detached";
     }
 
     private void ReloadChatGpt_OnClick(object sender, RoutedEventArgs e)
