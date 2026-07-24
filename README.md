@@ -1,4 +1,4 @@
-![ChatGPT Sidecar](https://i.imgur.com/xfmBoS9.jpeg)
+![ChatGPT Sidecar](https://i.imgur.com/Tnpg6pn.png)
 
 # ChatGPT Sidecar
 
