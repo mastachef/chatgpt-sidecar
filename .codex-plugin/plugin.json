@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.8.1-alpha.4",
-  "description": "A themed Windows ChatGPT companion for Codex that offloads planning, debugging, and repository analysis to help preserve precious Codex token usage.",
+  "version": "0.8.1-alpha.5",
+  "description": "A themed Windows ChatGPT companion for Codex that preserves precious Codex usage and creates detailed return-to-Codex handoffs.",
   "author": {
     "name": "mastachef"
   },
@@ -15,13 +15,14 @@
     "dock",
     "planning",
     "context",
+    "handoff",
     "token-saver",
     "sidecar"
   ],
   "interface": {
     "displayName": "Sidecar",
-    "shortDescription": "Preserve Codex usage by offloading planning to ChatGPT",
-    "longDescription": "Sidecar is a native Windows companion app that lets the user drag an Attach handle onto the exact Codex desktop window, pins itself beside that window, hosts a persistent ChatGPT session, gathers bounded local Codex and repository context, and offloads planning, debugging, review, and repository analysis so valuable Codex turns can stay focused on implementation.",
+    "shortDescription": "Preserve Codex usage and hand completed work back",
+    "longDescription": "Sidecar is a native Windows companion app that pins beside the exact Codex desktop window, hosts a persistent ChatGPT session, gathers bounded local Codex and repository context, offloads planning and debugging, and then generates a detailed return-to-Codex handoff prompt for implementation.",
     "developerName": "mastachef",
     "category": "Developer Tools",
     "capabilities": [
@@ -31,7 +32,7 @@
     "websiteURL": "https://github.com/mastachef/chatgpt-sidecar",
     "defaultPrompt": [
       "Open the Sidecar installation instructions.",
-      "Explain how Sidecar can preserve Codex token usage."
+      "Explain how Sidecar preserves Codex usage and creates a return-to-Codex handoff."
     ],
     "brandColor": "#74F59B"
   }

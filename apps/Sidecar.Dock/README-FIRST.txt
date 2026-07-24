@@ -1,17 +1,27 @@
 SIDECAR - START HERE
 
-1. Extract the entire ZIP to a normal folder such as Downloads\Sidecar.
-2. Do not run the executable from inside the compressed ZIP preview.
-3. Start Sidecar.exe.
-4. In Sidecar, hold the "Attach" handle, drag the cursor over the real Codex window, and release.
-5. Sidecar will pin itself to that exact window and follow it. Use "Auto" only to return to automatic detection.
-6. Use the theme menu in the header to select Codex Green, Codex Dark, Midnight, Light, or System. The selection is saved.
-7. If Sidecar appears to do nothing, run START_SIDECAR.cmd instead.
+1. Put Sidecar.exe in a normal folder and run it.
+2. Sign into ChatGPT inside Sidecar when requested.
+3. Hold the "Attach" handle, drag the cursor over the real Codex window, and release.
+4. Sidecar pins itself to that exact window. Use "Auto" only to return to automatic detection.
+5. Choose a theme, select the correct saved Codex thread, and enter a Plan, Debug, Review, or General request.
+6. Use "Preview" to inspect the local context package, then select "Prepare in ChatGPT" and send it.
 
-The launcher will show the process exit code and open this report when available:
+RETURN COMPLETED WORK TO CODEX
+
+7. After the ChatGPT work is complete, select "Prepare handoff".
+8. Send the populated handoff request in ChatGPT.
+9. When ChatGPT finishes the handoff response, select "Copy latest reply".
+10. Paste that detailed prompt into Codex so it can continue implementation without repeating the finished analysis.
+
+Sidecar currently populates prompts but does not auto-submit them.
+
+STARTUP REPORT
 
 %LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\startup-crash.log
 
-Paste that report into the ChatGPT conversation. It contains startup/runtime details, not your Codex conversation or repository context.
+RUNTIME DIAGNOSTICS
 
-The Microsoft Edge WebView2 Runtime is required for the embedded ChatGPT panel. A missing WebView2 Runtime should produce a visible error after the Sidecar window opens.
+%LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\sidecar-dock.log
+
+The Microsoft Edge WebView2 Runtime is required for the embedded ChatGPT panel. Sidecar.exe is self-contained for .NET and does not require the .NET SDK.

@@ -6,7 +6,7 @@ function readJson(path) {
   return JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), "utf8"));
 }
 
-test("plugin and marketplace metadata match the native Sidecar Dock layout", () => {
+test("plugin and marketplace metadata match the native Sidecar layout", () => {
   const manifest = readJson(".codex-plugin/plugin.json");
   const marketplace = readJson(".agents/plugins/marketplace.json");
   const hooks = readJson("hooks/hooks.json");
@@ -18,12 +18,14 @@ test("plugin and marketplace metadata match the native Sidecar Dock layout", () 
   assert.equal(Object.hasOwn(manifest, "skills"), false);
   assert.equal(Object.hasOwn(manifest, "mcpServers"), false);
   assert.equal(Object.hasOwn(manifest, "hooks"), false);
-  assert.equal(manifest.interface.displayName, "ChatGPT Sidecar Dock");
+  assert.equal(manifest.interface.displayName, "Sidecar");
+  assert.match(manifest.interface.longDescription, /handoff/i);
   assert.ok(Array.isArray(manifest.interface.defaultPrompt));
   assert.ok(manifest.interface.defaultPrompt.length > 0);
 
   assert.equal(existsSync(new URL("../apps/Sidecar.Dock/Sidecar.Dock.csproj", import.meta.url)), true);
   assert.equal(existsSync(new URL("../apps/Sidecar.Dock/MainWindow.xaml", import.meta.url)), true);
+  assert.equal(existsSync(new URL("../apps/Sidecar.Dock/MainWindow.Handoff.cs", import.meta.url)), true);
   assert.equal(existsSync(new URL("../apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj", import.meta.url)), true);
 
   assert.equal(marketplace.plugins[0].name, "chatgpt-sidecar");

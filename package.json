@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.8.1-alpha.4",
-  "description": "A themed Windows ChatGPT companion for Codex that offloads planning and debugging to help preserve precious Codex token usage.",
+  "version": "0.8.1-alpha.5",
+  "description": "A themed Windows ChatGPT companion for Codex that preserves precious Codex usage and creates detailed return-to-Codex handoffs.",
   "type": "module",
   "bin": {
     "codex-sidecar": "./bin/sidecar.mjs"
@@ -23,6 +23,7 @@
     "codex",
     "chatgpt",
     "token-saver",
+    "handoff",
     "wpf",
     "webview2",
     "windows",

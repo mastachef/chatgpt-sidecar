@@ -9,21 +9,18 @@ namespace ChatGPT.Sidecar.Dock.Docking;
 internal sealed class DockController : IDisposable
 {
     private readonly Window _sidecarWindow;
-    private readonly CodexWindowLocator _locator;
     private readonly WindowTargetPicker _targetPicker = new();
     private readonly DispatcherTimer _timer;
     private nint _sidecarHandle;
     private CodexWindow? _manualTarget;
     private CodexWindow? _lastDockedWindow;
-    private bool _automaticTargeting = true;
     private bool _disposed;
     private string? _lastStatus;
     private string? _lastTargetLabel;
 
-    public DockController(Window sidecarWindow, CodexWindowLocator locator)
+    public DockController(Window sidecarWindow)
     {
         _sidecarWindow = sidecarWindow;
-        _locator = locator;
         _timer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromMilliseconds(300)
@@ -31,9 +28,13 @@ internal sealed class DockController : IDisposable
         _timer.Tick += (_, _) => UpdateDockPosition();
     }
 
-    public bool IsFollowing { get; set; } = true;
+    // Kept for source compatibility with the previous constructor. The locator is deliberately ignored:
+    // Sidecar no longer auto-selects or auto-magnets to any window.
+    public DockController(Window sidecarWindow, CodexWindowLocator _) : this(sidecarWindow)
+    {
+    }
 
-    public bool IsManualTarget => !_automaticTargeting;
+    public bool IsFollowing { get; set; } = true;
 
     public event EventHandler<string>? StatusChanged;
 
@@ -43,8 +44,8 @@ internal sealed class DockController : IDisposable
     {
         _sidecarHandle = new WindowInteropHelper(_sidecarWindow).EnsureHandle();
         _timer.Start();
-        ReportTarget("Target: automatic detection");
-        UpdateDockPosition();
+        ReportTarget("No target selected");
+        ReportStatus("Drag Attach onto the Codex window to pin Sidecar.");
     }
 
     public bool TryAttachAtCursor(out string result)
@@ -62,7 +63,6 @@ internal sealed class DockController : IDisposable
         }
 
         _manualTarget = target;
-        _automaticTargeting = false;
         _lastDockedWindow = null;
         IsFollowing = true;
 
@@ -74,14 +74,13 @@ internal sealed class DockController : IDisposable
         return true;
     }
 
+    // Legacy call target retained only so older code still compiles. It clears the pin and does not perform detection.
     public void UseAutomaticTargeting()
     {
         _manualTarget = null;
-        _automaticTargeting = true;
         _lastDockedWindow = null;
-        ReportTarget("Target: automatic detection");
-        ReportStatus("Automatic Codex window detection enabled");
-        UpdateDockPosition();
+        ReportTarget("No target selected");
+        ReportStatus("Automatic targeting is disabled. Drag Attach onto the Codex window.");
     }
 
     private void UpdateDockPosition()
@@ -99,13 +98,13 @@ internal sealed class DockController : IDisposable
 
         if (NativeMethods.IsIconic(target.Handle))
         {
-            ReportStatus(IsManualTarget ? "Pinned window is minimized" : "Codex window is minimized");
+            ReportStatus("Pinned Codex window is minimized");
             return;
         }
 
         if (!NativeMethods.GetWindowRect(target.Handle, out var targetRect) || targetRect.Width < 200 || targetRect.Height < 200)
         {
-            ReportStatus("Target window bounds are unavailable");
+            ReportStatus("Pinned window bounds are unavailable");
             return;
         }
 
@@ -113,7 +112,7 @@ internal sealed class DockController : IDisposable
         var monitorInfo = new NativeMethods.MonitorInfo { Size = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.MonitorInfo>() };
         if (!NativeMethods.GetMonitorInfo(monitor, ref monitorInfo))
         {
-            ReportStatus("Target monitor information is unavailable");
+            ReportStatus("Pinned window monitor information is unavailable");
             return;
         }
 
@@ -136,7 +135,6 @@ internal sealed class DockController : IDisposable
         }
         else
         {
-            // When the selected window fills the monitor, overlap its right edge instead of moving Sidecar off-screen.
             x = Math.Max(workArea.Left, targetRect.Right - desiredWidth);
             side = "overlay-right";
         }
@@ -155,8 +153,7 @@ internal sealed class DockController : IDisposable
         if (_lastDockedWindow?.Handle != target.Handle || _lastDockedWindow?.Title != target.Title)
         {
             _lastDockedWindow = target;
-            var mode = IsManualTarget ? "Pinned" : "Auto-detected";
-            ReportTarget($"{mode}: {target.Title}");
+            ReportTarget($"Pinned: {target.Title}");
         }
 
         ReportStatus($"Docked {side} of {target.Title}");
@@ -164,33 +161,27 @@ internal sealed class DockController : IDisposable
 
     private CodexWindow? ResolveTarget()
     {
-        if (!_automaticTargeting)
+        if (_manualTarget is null)
         {
-            if (_manualTarget is null || !NativeMethods.IsWindow(_manualTarget.Handle))
-            {
-                _manualTarget = null;
-                ReportTarget("Pinned target closed — drag Attach to Codex again");
-                ReportStatus("Pinned target is no longer available");
-                return null;
-            }
-
-            var currentTitle = NativeMethods.ReadWindowTitle(_manualTarget.Handle).Trim();
-            if (!string.IsNullOrWhiteSpace(currentTitle) && currentTitle != _manualTarget.Title)
-            {
-                _manualTarget = _manualTarget with { Title = currentTitle };
-            }
-
-            return _manualTarget;
+            return null;
         }
 
-        var detected = _locator.FindBestWindow();
-        if (detected is null)
+        if (!NativeMethods.IsWindow(_manualTarget.Handle))
         {
-            ReportTarget("Target: no Codex window detected");
-            ReportStatus("Codex window not found — drag Attach onto it");
+            _manualTarget = null;
+            _lastDockedWindow = null;
+            ReportTarget("Pinned target closed — drag Attach onto Codex again");
+            ReportStatus("Pinned target is no longer available");
+            return null;
         }
 
-        return detected;
+        var currentTitle = NativeMethods.ReadWindowTitle(_manualTarget.Handle).Trim();
+        if (!string.IsNullOrWhiteSpace(currentTitle) && currentTitle != _manualTarget.Title)
+        {
+            _manualTarget = _manualTarget with { Title = currentTitle };
+        }
+
+        return _manualTarget;
     }
 
     private void ReportStatus(string status)

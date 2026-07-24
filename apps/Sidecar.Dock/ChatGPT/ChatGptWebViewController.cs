@@ -185,6 +185,81 @@ internal sealed class ChatGptWebViewController
         }
     }
 
+    public async Task<AssistantMessageResult> TryReadLatestAssistantMessageAsync()
+    {
+        if (_webView.CoreWebView2 is null)
+        {
+            var notReady = AssistantMessageResult.NotReady("webview_not_ready");
+            RecordAssistantMessageResult(notReady);
+            return notReady;
+        }
+
+        const string script = """
+            (() => {
+              const selectors = [
+                "[data-message-author-role='assistant']",
+                "article[data-testid^='conversation-turn-'] [data-message-author-role='assistant']",
+                "article[data-testid^='conversation-turn-']"
+              ];
+
+              let candidateCount = 0;
+              for (const selector of selectors) {
+                const candidates = Array.from(document.querySelectorAll(selector));
+                candidateCount += candidates.length;
+                const readable = candidates.filter((element) => {
+                  const rect = element.getBoundingClientRect();
+                  const style = window.getComputedStyle(element);
+                  if (rect.width < 120 || rect.height < 20 || style.visibility === 'hidden' || style.display === 'none') {
+                    return false;
+                  }
+
+                  const role = element.getAttribute('data-message-author-role')
+                    || element.querySelector('[data-message-author-role]')?.getAttribute('data-message-author-role');
+                  return role === 'assistant';
+                });
+
+                if (readable.length === 0) continue;
+                const latest = readable[readable.length - 1];
+                const content = latest.querySelector('.markdown, [class*="markdown"], [data-message-content]') || latest;
+                const text = (content.innerText || content.textContent || '').trim();
+                if (!text) continue;
+
+                return {
+                  success: true,
+                  reason: 'latest_assistant_message',
+                  text,
+                  selector,
+                  candidateCount
+                };
+              }
+
+              return {
+                success: false,
+                reason: 'no_assistant_message_found',
+                text: null,
+                selector: null,
+                candidateCount
+              };
+            })();
+            """;
+
+        try
+        {
+            var rawResult = await _webView.CoreWebView2.ExecuteScriptAsync(script);
+            var result = ParseAssistantMessageResult(rawResult)
+                ?? new AssistantMessageResult(false, "invalid_script_result");
+            RecordAssistantMessageResult(result);
+            return result;
+        }
+        catch (Exception exception)
+        {
+            _diagnostics.RecordException("assistant_message.read.exception", exception);
+            var failed = new AssistantMessageResult(false, $"script_exception:{exception.GetType().Name}");
+            RecordAssistantMessageResult(failed);
+            return failed;
+        }
+    }
+
     public string BuildDiagnosticsReport() => _diagnostics.BuildReport();
 
     internal static ComposerPopulateResult? ParseComposerResult(string? rawResult)
@@ -204,6 +279,23 @@ internal sealed class ChatGptWebViewController
         }
     }
 
+    internal static AssistantMessageResult? ParseAssistantMessageResult(string? rawResult)
+    {
+        if (string.IsNullOrWhiteSpace(rawResult) || rawResult == "null")
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<AssistantMessageResult>(rawResult, JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private void RecordComposerResult(ComposerPopulateResult result)
     {
         _diagnostics.Record(
@@ -213,6 +305,18 @@ internal sealed class ChatGptWebViewController
             ("selector", result.Selector),
             ("candidates", result.CandidateCount),
             ("element", result.ElementTag),
+            ("source", DescribeUri(_webView.Source?.ToString())));
+    }
+
+    private void RecordAssistantMessageResult(AssistantMessageResult result)
+    {
+        _diagnostics.Record(
+            "assistant_message.read.result",
+            ("success", result.Success),
+            ("reason", result.Reason),
+            ("selector", result.Selector),
+            ("candidates", result.CandidateCount),
+            ("characters", result.Text?.Length ?? 0),
             ("source", DescribeUri(_webView.Source?.ToString())));
     }
 
