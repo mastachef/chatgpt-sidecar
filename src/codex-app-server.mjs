@@ -2,14 +2,14 @@ import { spawn } from "node:child_process";
 import readline from "node:readline";
 
 /**
- * Read a stored Codex thread through app-server without resuming it.
- * Returns null when Codex CLI/app-server is unavailable or the handshake fails.
+ * Send one read-only request to Codex App Server after the required initialize handshake.
+ * Returns null when Codex CLI/app-server is unavailable, the handshake fails, or the request errors.
  *
- * @param {string} threadId
+ * @param {string} method
+ * @param {Record<string, unknown>} params
  * @param {{timeoutMs?: number, spawnImpl?: typeof spawn, command?: string}} [options]
  */
-export async function readCodexThread(threadId, options = {}) {
-  if (!threadId) return null;
+async function requestCodexAppServer(method, params, options = {}) {
   const timeoutMs = options.timeoutMs ?? 10000;
   const spawnImpl = options.spawnImpl ?? spawn;
   const command = options.command ?? process.env.CODEX_BIN ?? "codex";
@@ -62,16 +62,12 @@ export async function readCodexThread(threadId, options = {}) {
         }
 
         send({ method: "initialized", params: {} });
-        send({
-          method: "thread/read",
-          id: 2,
-          params: { threadId, includeTurns: true }
-        });
+        send({ method, id: 2, params });
         return;
       }
 
       if (message?.id === 2) {
-        finish(message?.error ? null : message?.result?.thread ?? null);
+        finish(message?.error ? null : message?.result ?? null);
       }
     });
 
@@ -82,9 +78,39 @@ export async function readCodexThread(threadId, options = {}) {
         clientInfo: {
           name: "codex_chatgpt_sidecar",
           title: "Codex ChatGPT Sidecar",
-          version: "0.3.0"
+          version: "0.4.1"
         }
       }
     });
   });
+}
+
+/**
+ * Read a stored Codex thread through app-server without resuming it.
+ * Returns null when Codex CLI/app-server is unavailable or the handshake fails.
+ *
+ * @param {string} threadId
+ * @param {{timeoutMs?: number, spawnImpl?: typeof spawn, command?: string}} [options]
+ */
+export async function readCodexThread(threadId, options = {}) {
+  if (!threadId) return null;
+  const result = await requestCodexAppServer(
+    "thread/read",
+    { threadId, includeTurns: true },
+    options
+  );
+  return result?.thread ?? null;
+}
+
+/**
+ * List the hooks Codex itself discovers for a cwd. This is a local read-only RPC and does not
+ * start a thread or model turn.
+ *
+ * @param {string} cwd
+ * @param {{timeoutMs?: number, spawnImpl?: typeof spawn, command?: string}} [options]
+ */
+export async function listCodexHooks(cwd, options = {}) {
+  if (!cwd) return null;
+  const result = await requestCodexAppServer("hooks/list", { cwds: [cwd] }, options);
+  return Array.isArray(result?.data) ? result.data : null;
 }
