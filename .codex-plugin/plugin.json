@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Use Sidecar to offload Codex planning and repository analysis to ChatGPT before a Codex model turn.",
   "author": {
     "name": "mastachef"
@@ -17,7 +17,7 @@
   "interface": {
     "displayName": "Codex ChatGPT Sidecar",
     "shortDescription": "Send Codex planning work to ChatGPT",
-    "longDescription": "Provides a Sidecar skill plus a stable global-hook installer that gathers the active Codex thread and repository context, opens a prepared ChatGPT handoff, and blocks the Codex model turn.",
+    "longDescription": "Provides a Sidecar skill plus a stable global-hook installer and no-model preflight verifier for gathering Codex thread and repository context before a Codex model turn.",
     "developerName": "mastachef",
     "category": "Developer Tools",
     "capabilities": [
