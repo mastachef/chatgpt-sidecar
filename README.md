@@ -1,106 +1,122 @@
-![Project Screenshot](https://i.imgur.com/xfmBoS9.jpeg)
+![ChatGPT Sidecar](https://i.imgur.com/xfmBoS9.jpeg)
 
 # ChatGPT Sidecar
 
-A hook-free companion for the ChatGPT Codex app. Sidecar reads the newest saved Codex conversation directly from `~/.codex/sessions`, captures the associated repository context, copies a structured handoff, and opens ChatGPT.
+Use the active Codex conversation and repository inside **ChatGPT Quick Chat**, without asking the main Codex thread to spend another model turn on planning, debugging, review, or investigation.
 
-**It does not submit anything into Codex, start a Codex thread, or start a Codex model turn.**
+Sidecar v0.6 bundles a local, read-only MCP server with the Codex plugin. It reads saved Codex rollout files and repository state directly from your machine, then supplies that context to the ChatGPT conversation opened from Codex.
 
-## Install on Windows
+## Primary workflow: inside the ChatGPT Codex app
+
+1. Install or refresh the **Codex ChatGPT Sidecar** plugin.
+2. Open the Codex project and conversation you are working on.
+3. Select **New chat** while in Codex to open ChatGPT Quick Chat.
+4. Invoke Sidecar with one of these prompts:
+
+```text
+$sidecar plan the safest implementation for the feature we were discussing
+$sidecar debug the failure from my active Codex thread
+$sidecar review the current Codex discussion and repository changes
+```
+
+You can also select the Sidecar plugin/tool from the chat's plugin or tools menu and say:
+
+```text
+Use Sidecar to pull my active Codex context and work out the next implementation step.
+```
+
+Sidecar calls `sidecar_get_active_context`, which returns the latest saved root Codex thread, its repository path, Git status and diffs, recent commits, tracked files, and common project instruction or manifest files.
+
+## Why this avoids another Codex turn
+
+The MCP bridge reads files under `~/.codex/sessions` and the associated repository. It does not call `thread/start`, `thread/resume`, or `turn/start`, and it does not submit text to the main Codex composer.
+
+The final response stays in ChatGPT Quick Chat and ends with a compact **CODEX EXECUTION PACKET** that can be pasted into Codex only when implementation is ready.
+
+## Bundled tools
+
+- `sidecar_get_active_context` — fetch the newest root Codex conversation and repo context.
+- `sidecar_list_recent_threads` — list recent root conversations when several projects are active.
+- `sidecar_get_thread` — fetch a selected saved thread by ID.
+- `sidecar_get_repo_context` — fetch Git and project context for a selected directory.
+
+All tools are read-only.
+
+## Install or update
+
+Install through the Codex plugin marketplace, or refresh the existing plugin from the Plugins screen to pull the latest source.
+
+For development from a checkout:
 
 ```powershell
 cd $HOME\chatgpt-sidecar
 git pull
-node .\bin\sidecar.mjs install-launcher
+(Get-Content .\package.json | ConvertFrom-Json).version
 ```
 
-The installer:
+The version should be `0.6.0`.
 
-- Copies the current Sidecar runtime to `%USERPROFILE%\.codex\sidecar-runtime`.
-- Removes Sidecar hook entries and the old prompt alias.
-- Installs a `sidecar` command.
-- Adds the command directory to your user `PATH`.
-- Creates a **ChatGPT Sidecar** Desktop shortcut.
-- Assigns **Ctrl+Alt+S** to that shortcut.
-
-Open a new PowerShell window after installation.
-
-## Use it
-
-While your Codex conversation is open, press:
-
-```text
-Ctrl+Alt+S
-```
-
-Choose `plan`, `debug`, `review`, or `general`, then enter what ChatGPT should do.
-
-You can also use PowerShell:
-
-```powershell
-sidecar plan "work out the safest implementation plan"
-sidecar debug "diagnose the current failure"
-sidecar review "review the current changes"
-```
-
-For a direct test from the checkout:
-
-```powershell
-node .\bin\sidecar.mjs launch plan "summarize the current Codex discussion and propose the next step"
-```
-
-## What happens
-
-1. Sidecar searches `%USERPROFILE%\.codex\sessions` for the newest saved root Codex conversation.
-2. It avoids newer subagent rollouts when the user's visible root conversation is available.
-3. It reads the saved JSONL locally; no Codex executable or App Server is needed.
-4. It identifies the conversation's working directory.
-5. It captures Git status, diffs, commits, tracked files, `AGENTS.md`, README, and common manifests.
-6. It redacts common credential patterns on a best-effort basis.
-7. It saves the handoff under the repository's `.sidecar\handoffs` directory.
-8. It copies the handoff to the clipboard and opens ChatGPT.
-
-ChatGPT is instructed to end with a compact **CODEX EXECUTION PACKET** that can be pasted back into Codex for focused implementation.
-
-## Verify without Codex usage
-
-```powershell
-node .\bin\sidecar.mjs doctor
-```
-
-A ready installation reports:
+The plugin manifest bundles:
 
 ```json
 {
-  "savedSessionsAvailable": true,
-  "externalLauncherInstalled": true,
-  "legacyGlobalHookInstalled": false,
-  "modelTurnRequired": false
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
 }
 ```
 
-Running `launch` is also safe from Codex usage because it only reads local files and runs Git commands.
+The MCP server starts automatically through:
+
+```json
+{
+  "command": "node",
+  "args": ["./mcp/server.mjs", "--stdio"]
+}
+```
+
+## Safe verification
+
+Opening the MCP/tools panel in the Codex app should show a server named `chatgpt-sidecar` with these four tools. Inspecting the tool list does not submit a model turn.
+
+A protocol-level smoke test is also available from the checkout:
+
+```powershell
+node .\mcp\server.mjs --stdio
+```
+
+For normal use, do not run the server manually; the plugin starts it.
+
+## Thread selection
+
+By default Sidecar chooses the most recently updated saved **root** Codex conversation and ignores newer subagent rollouts. When that is not the intended project, ChatGPT can call `sidecar_list_recent_threads` and re-run `sidecar_get_active_context` with the selected `session_id`.
+
+## Fallback launcher
+
+The v0.5 external launcher remains available for clients that do not expose plugin MCP tools in Quick Chat:
+
+```powershell
+node .\bin\sidecar.mjs install-launcher
+sidecar plan "your request"
+```
+
+This is a fallback, not the primary experience.
 
 ## Requirements
 
-- Windows with Node.js 20+
+- ChatGPT desktop with Codex
+- Node.js 20+
 - Git
-- ChatGPT with Codex sessions stored under `%USERPROFILE%\.codex\sessions`
-- ChatGPT desktop or a browser
+- Saved Codex sessions under `CODEX_HOME/sessions` or `~/.codex/sessions`
 
-## Privacy and limitations
+## Privacy
 
-The launcher reads the newest locally saved root Codex session. If multiple unrelated Codex conversations are active at exactly the same time, it chooses the most recently updated root session. Redaction is best-effort; review generated handoffs before sending sensitive code or secrets to ChatGPT.
+Sidecar reads local Codex rollout files and repository contents. Common credential patterns are redacted on a best-effort basis, but users should still avoid attaching secrets and should review sensitive context before relying on it outside the local machine.
 
-Consumer ChatGPT handoff is clipboard-based because ordinary ChatGPT does not expose a documented local API for silently submitting into a selected existing chat.
-
-## Legacy hook commands
-
-The old hook commands remain in the CLI for rollback and diagnosis, but they are no longer the recommended architecture. Sidecar v0.5 intentionally ships no plugin hook and no bundled Codex skill.
+Repository and conversation contents are treated as untrusted data and cannot override the user's instructions.
 
 ## Status
 
-**Version 0.5.0.** Replaces the unreliable Codex Desktop hook workflow with a standalone launcher that reads saved session files directly and cannot consume a Codex model turn.
+**Version 0.6.0.** Adds a bundled read-only MCP bridge and a Sidecar skill designed for ChatGPT Quick Chat inside the Codex desktop experience. The external launcher remains as a compatibility fallback.
 
 ## License
 
