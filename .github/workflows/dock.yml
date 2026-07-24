@@ -16,27 +16,86 @@ jobs:
   build-test-publish:
     runs-on: windows-latest
     steps:
-      - name: Exact native-test diagnostic
+      - uses: actions/checkout@v4
+        with:
+          show-progress: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Restore
+        run: dotnet restore apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj
+      - name: Verify canonical Sidecar artwork
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Continue'
-          git init source | Out-Null
-          Set-Location source
-          git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
-          git fetch --quiet --depth 1 origin $env:GITHUB_REF
-          git checkout --quiet FETCH_HEAD
+          $icon = 'apps/Sidecar.Dock/Assets/Sidecar.ico'
+          $expected = 'b2eca7a7065f44de22cde4b5a9caec3ad6e048f21fc1c012654ba63bb882d144'
+          $actual = (Get-FileHash $icon -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) {
+            throw "Canonical Sidecar artwork mismatch. Expected $expected, found $actual."
+          }
+      - name: Build native dock
+        run: dotnet build apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --no-restore
+      - name: Run native tests
+        run: dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=minimal"
+      - name: Publish single-file Windows alpha
+        run: >-
+          dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -o artifacts/Sidecar-win-x64
+      - name: Smoke test packaged executable
+        shell: pwsh
+        run: |
+          $publish = Join-Path $PWD 'artifacts/Sidecar-win-x64'
+          $exe = Join-Path $publish 'Sidecar.exe'
+          $oldExe = Join-Path $publish 'ChatGPT.Sidecar.Dock.exe'
+          $launcher = Join-Path $publish 'START_SIDECAR.cmd'
+          $readme = Join-Path $publish 'README-FIRST.txt'
+          $startupLog = Join-Path $env:LOCALAPPDATA 'ChatGPTSidecar/Diagnostics/startup-crash.log'
 
-          $log = Join-Path $env:RUNNER_TEMP 'sidecar-tests.log'
-          dotnet restore apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj *> $log
-          if ($LASTEXITCODE -eq 0) {
-            dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=normal" *>> $log
+          foreach ($required in @($exe, $launcher, $readme)) {
+            if (-not (Test-Path $required)) {
+              throw "Required published file missing: $required"
+            }
           }
 
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host '=== SIDECAR TEST FAILURE ==='
-            Get-Content $log | Where-Object { $_ -match '^\s*Failed |\[FAIL\]|Assert\.|Expected|Actual|Stack Trace|CodexHandoff|ChatGptWebView|ThemeManager|error (CS|MSB)' } | Select-Object -First 120
-            Write-Host '=== END SIDECAR TEST FAILURE ==='
-            exit 1
+          if (Test-Path $oldExe) {
+            throw "Legacy executable name is still being published: $oldExe"
           }
 
-          Get-Content $log | Select-Object -Last 30
+          Add-Type -AssemblyName System.Drawing
+          $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($exe)
+          if ($null -eq $icon -or $icon.Width -lt 16 -or $icon.Height -lt 16) {
+            throw 'Sidecar.exe does not contain a valid Windows application icon.'
+          }
+          $icon.Dispose()
+
+          Remove-Item $startupLog -Force -ErrorAction SilentlyContinue
+          $process = Start-Process -FilePath $exe -ArgumentList '--startup-smoke-test' -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            if (Test-Path $startupLog) {
+              Get-Content $startupLog
+            }
+            throw "Packaged Sidecar startup smoke test exited with code $($process.ExitCode)."
+          }
+
+          if (-not (Test-Path $startupLog)) {
+            throw 'Packaged Sidecar did not create its startup report.'
+          }
+
+          $success = Select-String -Path $startupLog -Pattern 'startup.smoke_test.success' -Quiet
+          if (-not $success) {
+            Get-Content $startupLog
+            throw 'Packaged Sidecar did not reach successful MainWindow construction.'
+          }
+
+          Get-Item $exe | Select-Object Name, Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sidecar-win-x64
+          path: artifacts/Sidecar-win-x64
+          if-no-files-found: error
