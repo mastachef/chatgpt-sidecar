@@ -14,14 +14,14 @@ internal sealed class CodexWindowLocator
         CodexWindow? best = null;
         var bestScore = 0;
 
-        NativeMethods.EnumWindows((handle, _) =>
+        NativeMethods.EnumWindows((handle, lParam) =>
         {
             if (!NativeMethods.IsWindowVisible(handle) || NativeMethods.IsIconic(handle))
             {
                 return true;
             }
 
-            _ = NativeMethods.GetWindowThreadProcessId(handle, out var rawProcessId);
+            NativeMethods.GetWindowThreadProcessId(handle, out var rawProcessId);
             var processId = unchecked((int)rawProcessId);
             if (processId <= 0 || processId == _currentProcessId)
             {
