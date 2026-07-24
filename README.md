@@ -6,21 +6,35 @@
 
 Sidecar is a native Windows companion for the ChatGPT/Codex desktop app. It stays put until you manually attach it to the exact Codex window you choose, reads a selected saved Codex conversation and bounded repository context locally, and prepares that context inside an embedded ChatGPT session without submitting another prompt to the Codex thread.
 
-> **Current release: v0.8.1-alpha.7**
+> **Current source version: v0.8.1-alpha.8**
 
 ## Screenshots
 
-<p align="center">
-  <img src="docs/screenshots/sidecar-context.svg" width="460" alt="Sidecar Codex context controls and embedded ChatGPT panel" />
-</p>
-
-<p align="center"><em>Codex context selection, request controls, preview, ChatGPT preparation, and the embedded ChatGPT workspace.</em></p>
+### Codex + Sidecar
 
 <p align="center">
-  <img src="docs/screenshots/sidecar-full.svg" width="300" alt="Full Sidecar Windows interface" />
+  <img src="https://i.imgur.com/TE1iGrK.png" width="100%" alt="Codex with Sidecar attached" />
 </p>
 
-<p align="center"><em>Full Sidecar companion window in a dark Codex-style theme.</em></p>
+<p align="center"><em>Sidecar attached beside Codex while working from the same project and saved conversation context.</em></p>
+
+### Sidecar
+
+<p align="center">
+  <img src="https://i.imgur.com/tTH2qWz.png" width="520" alt="Sidecar Windows application" />
+</p>
+
+### Theme examples
+
+<p align="center">
+  <img src="https://i.imgur.com/HADIHwh.png" width="48%" alt="Sidecar theme example 1" />
+  <img src="https://i.imgur.com/u0EDuHg.png" width="48%" alt="Sidecar theme example 2" />
+</p>
+
+<p align="center">
+  <img src="https://i.imgur.com/PWcAuQu.png" width="48%" alt="Sidecar theme example 3" />
+  <img src="https://i.imgur.com/C8AjkwS.png" width="48%" alt="Sidecar theme example 4" />
+</p>
 
 ## The workflow
 
@@ -49,6 +63,8 @@ Sidecar populates prompts but does **not** auto-submit them.
 - **Context preview:** inspect exactly what will be placed into ChatGPT.
 - **Return-to-Codex handoff:** asks ChatGPT for a self-contained implementation prompt covering decisions, files, steps, constraints, errors, tests, unresolved questions, and the next action.
 - **Copy latest reply:** copies the completed ChatGPT handoff directly to the clipboard.
+- **Built-in updater:** Sidecar checks GitHub Releases at startup and exposes an **Updates** button. New builds are downloaded and installed from inside Sidecar instead of requiring another manual EXE download.
+- **Verified updates:** before replacement, Sidecar verifies the GitHub release asset SHA-256 digest and requires a valid trusted Authenticode signature. If the running build is already signed, the update must be signed by the same publisher.
 - **Secret protection:** excludes sensitive file categories and redacts common credentials and tokens on a best-effort basis.
 - **Codex-style themes:** Codex Green, Codex Dark, Midnight, Light, and System.
 - **Fully themed window chrome:** the title bar, app icon, title text, minimize/maximize/close controls, cards, dropdowns, and footer all follow the selected Sidecar theme.
@@ -65,7 +81,25 @@ The public release contains only:
 - `Sidecar.exe`
 - `README-FIRST.txt`
 
-Put both files in a normal folder and run `Sidecar.exe`.
+Put both files in a normal user-writable folder and run `Sidecar.exe`. After that first install, Sidecar can pull newer signed releases from GitHub using its built-in updater.
+
+### Code signing policy
+
+Every public `Sidecar.exe` must be produced by the repository's automated release build and carry a valid trusted Authenticode signature before it can be published. If signing is unavailable or verification fails, the release workflow stops instead of publishing an unsigned executable. See **[Sidecar code signing policy](docs/CODE_SIGNING.md)** for the full policy and SignPath/Microsoft setup.
+
+## Updates
+
+Sidecar quietly checks recent GitHub Releases when it starts. You can also use the **Updates** button in the header to check manually.
+
+When a newer release is available, Sidecar:
+
+1. downloads the published `Sidecar.exe` to a staging folder under `%LOCALAPPDATA%\ChatGPTSidecar\Updates`
+2. verifies the SHA-256 digest reported by GitHub for that release asset
+3. requires Windows to report a valid trusted Authenticode signature on the downloaded executable
+4. requires the same signer as the currently running build when the current build is already signed
+5. closes Sidecar, swaps the executable with rollback protection, and restarts the updated copy
+
+The updater will not replace the running executable when integrity or signature validation fails.
 
 ## Themes
 
@@ -109,7 +143,7 @@ Startup: %LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\startup-crash.log
 Runtime: %LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\sidecar-dock.log
 ```
 
-Public Sidecar releases are now blocked unless `Sidecar.exe` has a valid trusted Authenticode signature. The workflow supports free SignPath Foundation/Open Source signing for eligible projects and Microsoft Artifact Signing Public Trust as an alternative. See [`docs/CODE_SIGNING.md`](docs/CODE_SIGNING.md). A trusted signature removes the **Unknown publisher** label; SmartScreen reputation is a separate Windows signal for direct downloads.
+A trusted signature removes the **Unknown publisher** label; SmartScreen reputation is a separate Windows signal for direct downloads.
 
 ## Development
 

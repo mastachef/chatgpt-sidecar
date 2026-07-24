@@ -10,6 +10,7 @@ public partial class MainWindow
     {
         base.OnSourceInitialized(e);
         NativeWindowTheme.Apply(this);
+        InitializeUpdaterUi();
     }
 
     private void TitleBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

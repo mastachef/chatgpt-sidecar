@@ -234,11 +234,15 @@ jobs:
 
           ### Changes
 
-          - the custom Sidecar title bar follows the selected theme
-          - Windows/DWM-owned frame, caption, border, and title text colors are synchronized to the active Sidecar theme where supported
-          - public GitHub releases are now blocked unless ``Sidecar.exe`` has a valid trusted Authenticode signature
-          - release automation supports both SignPath and Microsoft Artifact Signing Public Trust
-          - retained exact manual drag-to-attach docking, context preview, secret filtering, and populate-only safety
+          - added a built-in update checker and installer backed by GitHub Releases
+          - updates require both the GitHub release asset SHA-256 digest and a valid trusted Authenticode signature before replacement
+          - the updater swaps the executable only after Sidecar exits, keeps rollback protection, and restarts the verified build
+          - refreshed the public README with real Codex + Sidecar and theme screenshots
+          - retained themed window chrome, exact manual drag-to-attach docking, context preview, secret filtering, and populate-only safety
+
+          ### Code signing policy
+
+          Every public ``Sidecar.exe`` must come from this repository's automated release build and pass trusted Authenticode verification before publication. See https://github.com/mastachef/chatgpt-sidecar/blob/main/docs/CODE_SIGNING.md
 
           Sidecar populates prompts but does not auto-submit them.
           "@ | Set-Content artifacts/release-notes.md

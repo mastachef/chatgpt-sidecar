@@ -1,0 +1,64 @@
+name: Sidecar CI
+
+on:
+  push:
+    branches:
+      - main
+      - "feat/**"
+      - "fix/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          show-progress: false
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Node tests
+        shell: pwsh
+        run: npm test
+
+      - name: Restore native tests
+        shell: pwsh
+        run: dotnet restore apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj
+
+      - name: Native tests
+        shell: pwsh
+        run: dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=normal"
+
+      - name: Publish smoke build
+        shell: pwsh
+        run: |
+          dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -o artifacts/ci-published
+
+          if (-not (Test-Path artifacts/ci-published/Sidecar.exe)) {
+            throw 'Sidecar.exe was not produced.'
+          }
+
+          & artifacts/ci-published/Sidecar.exe --startup-smoke-test
+          if ($LASTEXITCODE -ne 0) {
+            throw "Sidecar startup smoke test failed with exit code $LASTEXITCODE."
+          }

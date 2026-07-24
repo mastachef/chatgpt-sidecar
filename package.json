@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.8.1-alpha.7",
+  "version": "0.8.1-alpha.8",
   "description": "A themed Windows ChatGPT companion for Codex that preserves precious Codex usage and creates detailed return-to-Codex handoffs.",
   "type": "module",
   "bin": {
