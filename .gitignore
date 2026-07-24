@@ -1,9 +1,8 @@
-node_modules/
 .DS_Store
 *.log
-coverage/
-.sidecar/
+*.user
+*.suo
+.vs/
+artifacts/
 **/bin/
 **/obj/
-artifacts/
-.vs/
