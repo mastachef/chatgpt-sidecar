@@ -15,6 +15,7 @@ import { execFileSync } from "node:child_process";
 import { collectRepoContext } from "../src/repo-context.mjs";
 import { createHandoff } from "../src/handoff.mjs";
 import { copyToClipboard, openUrl } from "../src/platform.mjs";
+import { listCodexHooks } from "../src/codex-app-server.mjs";
 
 const command = process.argv[2] || "help";
 const pluginRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -112,8 +113,8 @@ function installGlobalHook() {
   console.log(`Installed stable Sidecar runtime at ${runtimeDir}`);
   console.log(`Installed global UserPromptSubmit hook in ${hooksPath}`);
   console.log(`Installed optional prompt alias at ${aliasPath}`);
-  console.log("Fully restart Codex and trust the new global hook once, then test with:");
-  console.log("sidecar: plan summarize this project without modifying files");
+  console.log("Fully restart Codex and trust the new global hook once.");
+  console.log("Before submitting a Codex prompt, run: node ./bin/sidecar.mjs verify-hook");
 }
 
 function uninstallGlobalHook() {
@@ -162,6 +163,50 @@ if (command === "doctor") {
   process.exit(report.nodeSupported && report.codexAvailable && report.gitAvailable ? 0 : 1);
 }
 
+if (command === "verify-hook") {
+  const cwd = resolve(process.argv[3] || process.cwd());
+  const discovered = await listCodexHooks(cwd);
+  if (!discovered) {
+    console.error("Could not query Codex App Server. Confirm `codex app-server` is available in this shell.");
+    process.exit(2);
+  }
+
+  const allHooks = discovered.flatMap((entry) => Array.isArray(entry?.hooks) ? entry.hooks : []);
+  const sidecarHooks = allHooks.filter((hook) => {
+    const serialized = JSON.stringify(hook || {});
+    return serialized.includes("sidecar-runtime") || serialized.includes(SIDECAR_STATUS);
+  });
+
+  const normalized = sidecarHooks.map((hook) => ({
+    eventName: hook.eventName ?? null,
+    command: hook.command ?? null,
+    sourcePath: hook.sourcePath ?? null,
+    source: hook.source ?? null,
+    enabled: hook.enabled !== false,
+    isManaged: hook.isManaged === true,
+    trustStatus: hook.trustStatus ?? null,
+    currentHash: hook.currentHash ?? null
+  }));
+
+  const runnable = normalized.some((hook) => {
+    if (!hook.enabled) return false;
+    if (hook.isManaged) return true;
+    return hook.trustStatus !== "untrusted" && hook.trustStatus !== "changed" && hook.trustStatus !== null;
+  });
+
+  const report = {
+    cwd,
+    codexDiscoveredSidecarHook: normalized.length > 0,
+    codexReportsRunnableHook: runnable,
+    hooks: normalized,
+    modelTurnStarted: false,
+    desktopExecutionStillRequiresLiveConfirmation: true
+  };
+
+  console.log(JSON.stringify(report, null, 2));
+  process.exit(runnable ? 0 : 1);
+}
+
 if (command === "install-global-hook") {
   installGlobalHook();
   process.exit(0);
@@ -196,4 +241,4 @@ if (command === "bundle") {
   process.exit(0);
 }
 
-console.log(`Codex ChatGPT Sidecar\n\nCommands:\n  doctor                   Check local requirements and global-hook status\n  install-global-hook      Install Sidecar in ~/.codex/hooks.json\n  uninstall-global-hook    Remove only the Sidecar global hook/runtime\n  install-slash-alias      Install /prompts:sidecar into Codex home\n  bundle [request]         Build a repo-only ChatGPT handoff\n\nInside Codex after installing the global hook:\n  sidecar: plan <request>        Most deterministic trigger\n  $sidecar plan <request>        Bundled skill trigger\n  /prompts:sidecar plan <request>  Optional slash alias\n\nNote: current Codex does not support plugin-defined literal /sidecar commands.`);
+console.log(`Codex ChatGPT Sidecar\n\nCommands:\n  doctor                   Check local requirements and global-hook file status\n  verify-hook [cwd]        Ask Codex App Server whether Sidecar is discovered/trusted (no model turn)\n  install-global-hook      Install Sidecar in ~/.codex/hooks.json\n  uninstall-global-hook    Remove only the Sidecar global hook/runtime\n  install-slash-alias      Install /prompts:sidecar into Codex home\n  bundle [request]         Build a repo-only ChatGPT handoff\n\nInside Codex after verification:\n  sidecar: plan <request>          Most deterministic trigger\n  $sidecar plan <request>          Bundled skill trigger\n  /prompts:sidecar plan <request>  Optional slash alias\n\nNote: current Codex does not support plugin-defined literal /sidecar commands.`);
