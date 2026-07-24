@@ -118,7 +118,7 @@ public sealed class CodexSessionReaderTests
             records.Add(new { timestamp, type = "event_msg", payload = new { type = "agent_message", message = $"Working on {fileName}" } });
         }
 
-        File.WriteAllLines(path, records.Select(JsonSerializer.Serialize));
+        File.WriteAllLines(path, records.Select(record => JsonSerializer.Serialize(record)));
         File.SetLastWriteTimeUtc(path, lastWriteUtc);
         return path;
     }
