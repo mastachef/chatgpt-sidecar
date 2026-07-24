@@ -12,27 +12,20 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for and verify public release
+      - name: Verify public release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 36); do
-            if gh release view v0.8.1-alpha.8 --repo "$GITHUB_REPOSITORY" --json tagName,name,isLatest,publishedAt,assets > /tmp/release.json 2>/dev/null; then
-              cat /tmp/release.json
-              portable=$(jq -r '[.assets[].name] | index("Sidecar-Portable-win-x64.exe") != null' /tmp/release.json)
-              canonical=$(jq -r '[.assets[].name] | index("Sidecar.exe") != null' /tmp/release.json)
-              latest=$(jq -r '.isLatest' /tmp/release.json)
-              if [ "$portable" = true ] && [ "$canonical" = true ] && [ "$latest" = true ]; then
-                echo 'alpha.8 release is public, latest, and contains both executables.'
-                exit 0
-              fi
-              echo 'Release exists but expected latest/assets state is not ready yet.'
-            else
-              echo "Attempt $attempt: alpha.8 release not visible yet."
-            fi
-            sleep 10
-          done
-          echo 'Timed out waiting for v0.8.1-alpha.8 public release.'
-          exit 1
+          gh release view v0.8.1-alpha.8 --repo "$GITHUB_REPOSITORY" --json tagName,name,publishedAt,assets > /tmp/release.json
+          cat /tmp/release.json
+
+          portable=$(jq -r '[.assets[].name] | index("Sidecar-Portable-win-x64.exe") != null' /tmp/release.json)
+          canonical=$(jq -r '[.assets[].name] | index("Sidecar.exe") != null' /tmp/release.json)
+          latestTag=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 10 --json tagName,isLatest --jq '.[] | select(.isLatest == true) | .tagName')
+
+          test "$portable" = true
+          test "$canonical" = true
+          test "$latestTag" = 'v0.8.1-alpha.8'
+          echo 'alpha.8 release is public, latest, and contains both executables.'
