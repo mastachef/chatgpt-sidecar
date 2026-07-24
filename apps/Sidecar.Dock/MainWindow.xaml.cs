@@ -28,6 +28,8 @@ public partial class MainWindow : Window
         Closed += (_, _) => _dockController.Dispose();
     }
 
+    private CodexSession? SelectedSession => (ThreadBox.SelectedItem as SessionChoice)?.Session;
+
     private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
         try
@@ -47,7 +49,7 @@ public partial class MainWindow : Window
         }
 
         _dockController.Start();
-        RefreshDetectedContext();
+        RefreshThreads();
     }
 
     private async void PrepareButton_OnClick(object sender, RoutedEventArgs e)
@@ -55,11 +57,11 @@ public partial class MainWindow : Window
         try
         {
             PrepareButton.IsEnabled = false;
-            StatusText.Text = "Reading Codex session and repository...";
+            StatusText.Text = "Reading selected Codex thread and repository...";
             var context = BuildContextPackage();
             _latestContextPackage = context.Package;
             ContextStatsText.Text = $"{context.Package.Length:N0} chars";
-            DetectedContextText.Text = $"{context.Session.Title} — {Path.GetFileName(context.Repository.Root)}";
+            UpdateDetectedContext(context.Session);
 
             StatusText.Text = "Populating ChatGPT composer...";
             var populated = await _chatGptController.TryPopulateComposerAsync(context.Package);
@@ -129,8 +131,9 @@ public partial class MainWindow : Window
 
     private (string Package, CodexSession Session, RepositorySnapshot Repository) BuildContextPackage()
     {
-        var session = _sessionReader.FindLatestRootSession()
-            ?? throw new InvalidOperationException("No saved Codex conversation was found under CODEX_HOME/sessions. Open a Codex project and send at least one normal Codex message first.");
+        var session = SelectedSession
+            ?? _sessionReader.FindLatestRootSession()
+            ?? throw new InvalidOperationException("No saved root Codex conversation was found under CODEX_HOME/sessions. Open a Codex project and send at least one normal Codex message first.");
         var workingDirectory = Directory.Exists(session.WorkingDirectory)
             ? session.WorkingDirectory!
             : Environment.CurrentDirectory;
@@ -146,12 +149,54 @@ public partial class MainWindow : Window
         return (package, session, repository);
     }
 
-    private void RefreshDetectedContext()
+    private void RefreshThreads()
     {
-        var session = _sessionReader.FindLatestRootSession();
-        DetectedContextText.Text = session is null
-            ? "No saved Codex conversation detected"
-            : $"{session.Title} — {Path.GetFileName(session.WorkingDirectory ?? string.Empty)}";
+        var previousIdentity = SessionIdentity(SelectedSession);
+        var choices = _sessionReader
+            .ListRecentRootSessions()
+            .Select(session => new SessionChoice(session))
+            .ToArray();
+
+        ThreadBox.ItemsSource = choices;
+        ThreadBox.SelectedItem = choices.FirstOrDefault(choice =>
+                string.Equals(SessionIdentity(choice.Session), previousIdentity, StringComparison.OrdinalIgnoreCase))
+            ?? choices.FirstOrDefault();
+
+        if (ThreadBox.SelectedItem is SessionChoice choice)
+        {
+            UpdateDetectedContext(choice.Session);
+            StatusText.Text = $"Loaded {choices.Length} recent root Codex thread{(choices.Length == 1 ? string.Empty : "s")}.";
+        }
+        else
+        {
+            DetectedContextText.Text = "No saved root Codex conversation detected";
+            StatusText.Text = "Open a Codex project and send at least one message.";
+        }
+    }
+
+    private void UpdateDetectedContext(CodexSession session)
+    {
+        var project = ProjectName(session);
+        DetectedContextText.Text = $"{project} — {session.Title}";
+    }
+
+    private static string SessionIdentity(CodexSession? session)
+    {
+        return session?.ThreadId
+            ?? session?.SessionId
+            ?? session?.RolloutPath
+            ?? string.Empty;
+    }
+
+    private static string ProjectName(CodexSession session)
+    {
+        if (string.IsNullOrWhiteSpace(session.WorkingDirectory))
+        {
+            return "Unknown project";
+        }
+
+        var normalized = session.WorkingDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return Path.GetFileName(normalized) is { Length: > 0 } name ? name : normalized;
     }
 
     private void FollowCodexToggle_OnChanged(object sender, RoutedEventArgs e)
@@ -163,6 +208,32 @@ public partial class MainWindow : Window
     private void ReloadChatGpt_OnClick(object sender, RoutedEventArgs e)
     {
         _chatGptController.Reload();
-        RefreshDetectedContext();
+        RefreshThreads();
+    }
+
+    private void RefreshThreadsButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        RefreshThreads();
+    }
+
+    private void ThreadBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        _latestContextPackage = null;
+        ContextStatsText.Text = string.Empty;
+        if (SelectedSession is { } session)
+        {
+            UpdateDetectedContext(session);
+            StatusText.Text = "Selected Codex thread ready.";
+        }
+    }
+
+    private sealed record SessionChoice(CodexSession Session)
+    {
+        public override string ToString()
+        {
+            var project = ProjectName(Session);
+            var localTime = Session.UpdatedAt.ToLocalTime().ToString("g");
+            return $"{project} · {Session.Title} · {localTime}";
+        }
     }
 }
