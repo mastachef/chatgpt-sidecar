@@ -8,7 +8,7 @@ jobs:
   node-test:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -17,5 +17,7 @@ jobs:
           node-version: 20
       - run: npm test
       - run: node --check bin/sidecar.mjs
+      - run: node --check bin/sidecar-quickchat.mjs
+      - run: node --check bin/install-quickchat.mjs
       - run: node --check src/local-session.mjs
       - run: node --check mcp/server.mjs
