@@ -1,3 +1,5 @@
+using Xunit;
+
 namespace ChatGPT.Sidecar.Dock.Tests;
 
 public sealed class UpdateServiceSourceTests
