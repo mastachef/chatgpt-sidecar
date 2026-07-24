@@ -1,0 +1,25 @@
+name: Inspect alpha.8 publisher
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show publisher state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow publish-alpha8-now.yml --limit 5 --json databaseId,status,conclusion,headSha,createdAt,event,displayTitle
+          latest=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow publish-alpha8-now.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+          echo "latest=$latest"
+          gh run view "$latest" --repo "$GITHUB_REPOSITORY" --json status,conclusion,jobs
