@@ -2,138 +2,105 @@
 
 # ChatGPT Sidecar
 
-A Codex companion that offloads planning, debugging, review, and repository investigation to ChatGPT **before Codex starts a model turn**.
+A hook-free companion for the ChatGPT Codex app. Sidecar reads the newest saved Codex conversation directly from `~/.codex/sessions`, captures the associated repository context, copies a structured handoff, and opens ChatGPT.
 
-## Current reliability status
+**It does not submit anything into Codex, start a Codex thread, or start a Codex model turn.**
 
-Sidecar v0.4.1 installs its executable hook at the user level in `~/.codex/hooks.json` because some Codex releases install plugin skills but fail to execute plugin-local hooks.
+## Install on Windows
 
-A separate Codex Desktop regression has also been reported where valid user-level hooks are ignored by the desktop runtime. Therefore, **do not spend a Codex turn testing until the no-model preflight below confirms that your installed Codex CLI discovers and trusts the Sidecar hook.** A successful preflight still cannot prove a buggy Desktop build will dispatch it; it removes every uncertainty except that final desktop event.
-
-## Install
-
-Install the plugin normally:
-
-```bash
-codex plugin marketplace add mastachef/chatgpt-sidecar
-codex plugin add chatgpt-sidecar@mastachef-codex-plugins
-```
-
-Then install the stable global hook from a checkout:
-
-```bash
-git clone https://github.com/mastachef/chatgpt-sidecar.git
-cd chatgpt-sidecar
-node ./bin/sidecar.mjs install-global-hook
+```powershell
+cd $HOME\chatgpt-sidecar
+git pull
+node .\bin\sidecar.mjs install-launcher
 ```
 
 The installer:
 
-- Copies a stable Sidecar runtime into `~/.codex/sidecar-runtime`.
-- Preserves existing hooks and backs up an existing `hooks.json`.
-- Adds only the Sidecar `UserPromptSubmit` hook to `~/.codex/hooks.json`.
-- Uses the absolute path to the Node executable that ran the installer.
-- Installs the optional `/prompts:sidecar` alias.
+- Copies the current Sidecar runtime to `%USERPROFILE%\.codex\sidecar-runtime`.
+- Removes Sidecar hook entries and the old prompt alias.
+- Installs a `sidecar` command.
+- Adds the command directory to your user `PATH`.
+- Creates a **ChatGPT Sidecar** Desktop shortcut.
+- Assigns **Ctrl+Alt+S** to that shortcut.
 
-Fully restart Codex after installation and trust the new global hook once when prompted.
+Open a new PowerShell window after installation.
 
-## Zero-Codex-usage preflight
+## Use it
 
-From the Sidecar checkout, run:
-
-```bash
-node ./bin/sidecar.mjs doctor
-node ./bin/sidecar.mjs verify-hook
-```
-
-`verify-hook` starts a local `codex app-server`, performs only the initialize handshake and `hooks/list`, and exits. It does **not** call `thread/start`, `turn/start`, or any model.
-
-A good result contains:
-
-```json
-{
-  "codexDiscoveredSidecarHook": true,
-  "codexReportsRunnableHook": true,
-  "modelTurnStarted": false
-}
-```
-
-Also inspect `hooks[0].trustStatus`. It should not be `untrusted` or `changed`.
-
-If discovery or trust is false, do not test inside Codex yet.
-
-## Live test after preflight
-
-The most deterministic first trigger is plain composer text:
+While your Codex conversation is open, press:
 
 ```text
-sidecar: plan summarize this project and propose one harmless README improvement. Do not modify files.
+Ctrl+Alt+S
 ```
 
-Correct behavior:
+Choose `plan`, `debug`, `review`, or `general`, then enter what ChatGPT should do.
 
-1. Codex does not answer the planning request.
-2. Codex reports that Sidecar intercepted and blocked the turn.
-3. ChatGPT opens.
-4. A structured Markdown handoff is copied to the clipboard.
-5. The handoff is also saved under the active repository's `.sidecar/handoffs` directory.
+You can also use PowerShell:
 
-After that succeeds, these forms are also recognized:
-
-```text
-$sidecar plan how to add account recovery
-$sidecar debug determine why login tests are failing
-$sidecar review
-/prompts:sidecar plan how to add account recovery
+```powershell
+sidecar plan "work out the safest implementation plan"
+sidecar debug "diagnose the current failure"
+sidecar review "review the current changes"
 ```
 
-Some Codex clients display an invoked skill as `Sidecar plan ...` rather than preserving `$sidecar`; Sidecar recognizes both forms.
+For a direct test from the checkout:
 
-A literal plugin-defined `/sidecar` command is not currently supported by Codex. The optional slash-style alias is `/prompts:sidecar`.
+```powershell
+node .\bin\sidecar.mjs launch plan "summarize the current Codex discussion and propose the next step"
+```
 
 ## What happens
 
-1. The global `UserPromptSubmit` hook recognizes the Sidecar trigger.
-2. It reads the stored Codex conversation through `codex app-server` and `thread/read`.
-3. It captures Git status, diffs, commits, tracked files, `AGENTS.md`, README, and common manifests.
-4. It redacts common credential patterns on a best-effort basis.
-5. It saves and copies a structured Markdown handoff.
-6. It opens ChatGPT.
-7. It returns `decision: block`, preventing the Codex model turn.
+1. Sidecar searches `%USERPROFILE%\.codex\sessions` for the newest saved root Codex conversation.
+2. It avoids newer subagent rollouts when the user's visible root conversation is available.
+3. It reads the saved JSONL locally; no Codex executable or App Server is needed.
+4. It identifies the conversation's working directory.
+5. It captures Git status, diffs, commits, tracked files, `AGENTS.md`, README, and common manifests.
+6. It redacts common credential patterns on a best-effort basis.
+7. It saves the handoff under the repository's `.sidecar\handoffs` directory.
+8. It copies the handoff to the clipboard and opens ChatGPT.
 
-ChatGPT is instructed to finish with a compact **CODEX EXECUTION PACKET** that can be pasted back into Codex for focused implementation.
+ChatGPT is instructed to end with a compact **CODEX EXECUTION PACKET** that can be pasted back into Codex for focused implementation.
 
-## Commands
+## Verify without Codex usage
 
-```bash
-node ./bin/sidecar.mjs doctor
-node ./bin/sidecar.mjs verify-hook
-node ./bin/sidecar.mjs install-global-hook
-node ./bin/sidecar.mjs uninstall-global-hook
-node ./bin/sidecar.mjs install-slash-alias
-node ./bin/sidecar.mjs bundle "review this repository"
+```powershell
+node .\bin\sidecar.mjs doctor
 ```
 
-`uninstall-global-hook` removes only the Sidecar runtime and Sidecar hook entry; other user hooks are preserved.
+A ready installation reports:
+
+```json
+{
+  "savedSessionsAvailable": true,
+  "externalLauncherInstalled": true,
+  "legacyGlobalHookInstalled": false,
+  "modelTurnRequired": false
+}
+```
+
+Running `launch` is also safe from Codex usage because it only reads local files and runs Git commands.
 
 ## Requirements
 
-- Node.js 20+
+- Windows with Node.js 20+
 - Git
-- Current Codex with App Server and hooks
+- ChatGPT with Codex sessions stored under `%USERPROFILE%\.codex\sessions`
 - ChatGPT desktop or a browser
 
 ## Privacy and limitations
 
-The hook reads the active stored Codex conversation and local repository context. Redaction is best-effort; review generated handoffs before sending sensitive code or secrets to ChatGPT.
+The launcher reads the newest locally saved root Codex session. If multiple unrelated Codex conversations are active at exactly the same time, it chooses the most recently updated root session. Redaction is best-effort; review generated handoffs before sending sensitive code or secrets to ChatGPT.
 
-Consumer ChatGPT handoff is clipboard-based because ordinary ChatGPT does not expose a documented local API for silently submitting into a selected existing chat. A fully automatic API mode can be added later but would be separately billed.
+Consumer ChatGPT handoff is clipboard-based because ordinary ChatGPT does not expose a documented local API for silently submitting into a selected existing chat.
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/ROADMAP.md`](docs/ROADMAP.md), and [`docs/AUDIT.md`](docs/AUDIT.md).
+## Legacy hook commands
+
+The old hook commands remain in the CLI for rollback and diagnosis, but they are no longer the recommended architecture. Sidecar v0.5 intentionally ships no plugin hook and no bundled Codex skill.
 
 ## Status
 
-**Version 0.4.1.** Adds a no-model `hooks/list` preflight so installation and trust can be verified without consuming a Codex turn.
+**Version 0.5.0.** Replaces the unreliable Codex Desktop hook workflow with a standalone launcher that reads saved session files directly and cannot consume a Codex model turn.
 
 ## License
 
