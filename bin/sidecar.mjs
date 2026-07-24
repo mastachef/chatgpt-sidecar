@@ -16,6 +16,8 @@ import { collectRepoContext } from "../src/repo-context.mjs";
 import { createHandoff } from "../src/handoff.mjs";
 import { copyToClipboard, openUrl } from "../src/platform.mjs";
 import { listCodexHooks } from "../src/codex-app-server.mjs";
+import { findLatestCodexSession } from "../src/local-session.mjs";
+import { isoFileStamp } from "../src/utils.mjs";
 
 const command = process.argv[2] || "help";
 const pluginRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -72,6 +74,21 @@ function installSlashAlias(codexHome) {
   return destination;
 }
 
+function removeSidecarHookEntry({ removeRuntime = false } = {}) {
+  const codexHome = codexHomePath();
+  const runtimeDir = join(codexHome, "sidecar-runtime");
+  const hooksPath = join(codexHome, "hooks.json");
+  if (existsSync(hooksPath)) {
+    const hooksConfig = readHooksFile(hooksPath);
+    const existing = Array.isArray(hooksConfig.hooks.UserPromptSubmit)
+      ? hooksConfig.hooks.UserPromptSubmit
+      : [];
+    hooksConfig.hooks.UserPromptSubmit = existing.filter((group) => !isSidecarHookGroup(group));
+    writeFileSync(hooksPath, `${JSON.stringify(hooksConfig, null, 2)}\n`, "utf8");
+  }
+  if (removeRuntime) rmSync(runtimeDir, { recursive: true, force: true });
+}
+
 function installGlobalHook() {
   const codexHome = codexHomePath();
   const runtimeDir = join(codexHome, "sidecar-runtime");
@@ -80,10 +97,7 @@ function installGlobalHook() {
   copyRuntime(runtimeDir);
 
   const hookScript = join(runtimeDir, "src", "hook.mjs");
-  const quotedNode = `"${process.execPath}"`;
-  const quotedScript = `"${hookScript}"`;
-  const hookCommand = `${quotedNode} ${quotedScript}`;
-
+  const hookCommand = `"${process.execPath}" "${hookScript}"`;
   const hooksConfig = readHooksFile(hooksPath);
   const existing = Array.isArray(hooksConfig.hooks.UserPromptSubmit)
     ? hooksConfig.hooks.UserPromptSubmit
@@ -104,40 +118,153 @@ function installGlobalHook() {
     }
   ];
 
-  if (existsSync(hooksPath)) {
-    copyFileSync(hooksPath, `${hooksPath}.backup-${Date.now()}`);
-  }
+  if (existsSync(hooksPath)) copyFileSync(hooksPath, `${hooksPath}.backup-${Date.now()}`);
   writeFileSync(hooksPath, `${JSON.stringify(hooksConfig, null, 2)}\n`, "utf8");
-  const aliasPath = installSlashAlias(codexHome);
-
-  console.log(`Installed stable Sidecar runtime at ${runtimeDir}`);
-  console.log(`Installed global UserPromptSubmit hook in ${hooksPath}`);
-  console.log(`Installed optional prompt alias at ${aliasPath}`);
-  console.log("Fully restart Codex and trust the new global hook once.");
-  console.log("Before submitting a Codex prompt, run: node ./bin/sidecar.mjs verify-hook");
+  installSlashAlias(codexHome);
+  console.log("Installed the legacy hook path. The external launcher is recommended instead.");
 }
 
-function uninstallGlobalHook() {
+function parseLaunchArgs(args) {
+  const values = [...args];
+  const allowed = new Set(["plan", "debug", "review", "general"]);
+  let mode = "general";
+  if (allowed.has(String(values[0] || "").toLowerCase())) mode = values.shift().toLowerCase();
+  const request = values.join(" ").trim() || "Review the current Codex session and produce the best next-step plan.";
+  return { mode, request };
+}
+
+function launchSidecar(args) {
+  const { mode, request } = parseLaunchArgs(args);
+  const codexHome = codexHomePath();
+  const session = findLatestCodexSession({ codexHome });
+  if (!session) {
+    throw new Error(`No saved Codex session was found under ${join(codexHome, "sessions")}. Open a Codex project and send at least one normal message first.`);
+  }
+
+  const sessionCwd = session.cwd && existsSync(session.cwd) ? session.cwd : process.cwd();
+  const repo = collectRepoContext(sessionCwd);
+  const handoff = createHandoff({
+    mode,
+    request,
+    hookInput: {
+      cwd: session.cwd || sessionCwd,
+      session_id: session.sessionId,
+      turn_id: null,
+      model: null
+    },
+    repo,
+    thread: session.thread
+  });
+
+  const handoffDir = join(repo.root, ".sidecar", "handoffs");
+  mkdirSync(handoffDir, { recursive: true });
+  const handoffPath = join(handoffDir, `${isoFileStamp()}-${mode}.md`);
+  writeFileSync(handoffPath, handoff, "utf8");
+
+  const copied = copyToClipboard(handoff);
+  const opened = openUrl("https://chatgpt.com/");
+  console.log(`Sidecar read the saved Codex session directly: ${session.path}`);
+  console.log(`Saved handoff: ${handoffPath}`);
+  console.log(copied ? "Copied handoff to clipboard." : "Clipboard copy failed; open the saved Markdown file instead.");
+  console.log(opened ? "Opened ChatGPT." : "Could not open ChatGPT automatically.");
+  console.log("No Codex prompt, thread, or model turn was started.");
+}
+
+function psQuote(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+function installExternalLauncher() {
   const codexHome = codexHomePath();
   const runtimeDir = join(codexHome, "sidecar-runtime");
-  const hooksPath = join(codexHome, "hooks.json");
-  if (existsSync(hooksPath)) {
-    const hooksConfig = readHooksFile(hooksPath);
-    const existing = Array.isArray(hooksConfig.hooks.UserPromptSubmit)
-      ? hooksConfig.hooks.UserPromptSubmit
-      : [];
-    hooksConfig.hooks.UserPromptSubmit = existing.filter((group) => !isSidecarHookGroup(group));
-    writeFileSync(hooksPath, `${JSON.stringify(hooksConfig, null, 2)}\n`, "utf8");
+  const launcherDir = join(codexHome, "sidecar-bin");
+  const runtimeScript = join(runtimeDir, "bin", "sidecar.mjs");
+  const cmdPath = join(launcherDir, "sidecar.cmd");
+  const ps1Path = join(launcherDir, "sidecar-launch.ps1");
+  const aliasPath = join(codexHome, "prompts", "sidecar.md");
+
+  mkdirSync(launcherDir, { recursive: true });
+  copyRuntime(runtimeDir);
+  removeSidecarHookEntry({ removeRuntime: false });
+  rmSync(aliasPath, { force: true });
+
+  writeFileSync(
+    cmdPath,
+    `@echo off\r\n"${process.execPath}" "${runtimeScript}" launch %*\r\n`,
+    "utf8"
+  );
+
+  writeFileSync(
+    ps1Path,
+    [
+      "$ErrorActionPreference = 'Stop'",
+      "$mode = Read-Host 'Mode [plan/debug/review/general] (default: plan)'",
+      "if ([string]::IsNullOrWhiteSpace($mode)) { $mode = 'plan' }",
+      "$request = Read-Host 'What should ChatGPT Sidecar do?'",
+      "if ([string]::IsNullOrWhiteSpace($request)) { Write-Host 'Cancelled.'; exit 1 }",
+      `& ${psQuote(process.execPath)} ${psQuote(runtimeScript)} launch $mode $request`,
+      "if ($LASTEXITCODE -ne 0) { Read-Host 'Press Enter to close' | Out-Null }"
+    ].join("\r\n") + "\r\n",
+    "utf8"
+  );
+
+  let shortcutInstalled = false;
+  try {
+    const shortcutArgs = `-NoProfile -ExecutionPolicy Bypass -File "${ps1Path}"`;
+    const script = [
+      "$shell = New-Object -ComObject WScript.Shell",
+      "$shortcutPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'ChatGPT Sidecar.lnk'",
+      "$shortcut = $shell.CreateShortcut($shortcutPath)",
+      `$shortcut.TargetPath = ${psQuote("powershell.exe")}`,
+      `$shortcut.Arguments = ${psQuote(shortcutArgs)}`,
+      `$shortcut.WorkingDirectory = ${psQuote(runtimeDir)}`,
+      `$shortcut.Description = ${psQuote("Open ChatGPT Sidecar without submitting a Codex turn")}`,
+      `$shortcut.Hotkey = ${psQuote("CTRL+ALT+S")}`,
+      "$shortcut.Save()",
+      "$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')",
+      "if ([string]::IsNullOrWhiteSpace($userPath)) { $userPath = '' }",
+      `$launcherDir = ${psQuote(launcherDir)}`,
+      "if (($userPath -split ';') -notcontains $launcherDir) { [Environment]::SetEnvironmentVariable('Path', (($userPath.TrimEnd(';') + ';' + $launcherDir).Trim(';')), 'User') }"
+    ].join("; ");
+    execFileSync("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script], {
+      stdio: "ignore",
+      windowsHide: true
+    });
+    shortcutInstalled = true;
+  } catch {
+    shortcutInstalled = false;
   }
-  rmSync(runtimeDir, { recursive: true, force: true });
-  console.log("Removed the Sidecar global hook and stable runtime. Existing non-Sidecar hooks were preserved.");
+
+  console.log(`Installed hook-free Sidecar runtime at ${runtimeDir}`);
+  console.log(`Installed command launcher at ${cmdPath}`);
+  console.log("Removed the Sidecar global hook and prompt alias so accidental Codex submissions cannot trigger it.");
+  console.log(shortcutInstalled
+    ? "Installed Desktop shortcut 'ChatGPT Sidecar' with hotkey Ctrl+Alt+S."
+    : `Could not create the Desktop shortcut automatically. Run: powershell -File "${ps1Path}"`);
+  console.log("Open a new PowerShell window to use: sidecar plan \"your request\"");
+  console.log("This launcher reads saved session files directly and never submits a Codex turn.");
+}
+
+if (command === "launch") {
+  try {
+    launchSidecar(process.argv.slice(3));
+    process.exit(0);
+  } catch (error) {
+    console.error(`Sidecar launch failed: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
+}
+
+if (command === "install-launcher") {
+  installExternalLauncher();
+  process.exit(0);
 }
 
 if (command === "doctor") {
   const major = Number.parseInt(process.versions.node.split(".")[0], 10);
   const codexHome = codexHomePath();
-  const aliasPath = join(codexHome, "prompts", "sidecar.md");
   const hooksPath = join(codexHome, "hooks.json");
+  const sessionsPath = join(codexHome, "sessions");
   let globalHookInstalled = false;
   try {
     globalHookInstalled = existsSync(hooksPath) && isSidecarHookGroup(readHooksFile(hooksPath));
@@ -147,64 +274,31 @@ if (command === "doctor") {
   const report = {
     node: process.version,
     nodeSupported: major >= 20,
-    codexAvailable: commandExists(process.env.CODEX_BIN || "codex"),
     gitAvailable: commandExists("git"),
     platform: process.platform,
     pluginRoot,
     codexHome,
-    globalHookInstalled,
-    primaryTrigger: "sidecar: <mode> <request>",
-    skillTrigger: "$sidecar <mode> <request>",
-    slashAlias: "/prompts:sidecar <mode> <request>",
-    slashAliasInstalled: existsSync(aliasPath),
-    literalSlashSidecarSupportedByCodex: false
+    savedSessionsAvailable: existsSync(sessionsPath),
+    externalLauncherInstalled: existsSync(join(codexHome, "sidecar-bin", "sidecar.cmd")),
+    legacyGlobalHookInstalled: globalHookInstalled,
+    recommendedCommand: "sidecar plan \"your request\"",
+    modelTurnRequired: false
   };
   console.log(JSON.stringify(report, null, 2));
-  process.exit(report.nodeSupported && report.codexAvailable && report.gitAvailable ? 0 : 1);
+  process.exit(report.nodeSupported && report.gitAvailable && report.savedSessionsAvailable ? 0 : 1);
 }
 
 if (command === "verify-hook") {
   const cwd = resolve(process.argv[3] || process.cwd());
   const discovered = await listCodexHooks(cwd);
   if (!discovered) {
-    console.error("Could not query Codex App Server. Confirm `codex app-server` is available in this shell.");
+    console.error("Could not query Codex App Server. Use `install-launcher`; the external launcher does not need App Server or hooks.");
     process.exit(2);
   }
-
   const allHooks = discovered.flatMap((entry) => Array.isArray(entry?.hooks) ? entry.hooks : []);
-  const sidecarHooks = allHooks.filter((hook) => {
-    const serialized = JSON.stringify(hook || {});
-    return serialized.includes("sidecar-runtime") || serialized.includes(SIDECAR_STATUS);
-  });
-
-  const normalized = sidecarHooks.map((hook) => ({
-    eventName: hook.eventName ?? null,
-    command: hook.command ?? null,
-    sourcePath: hook.sourcePath ?? null,
-    source: hook.source ?? null,
-    enabled: hook.enabled !== false,
-    isManaged: hook.isManaged === true,
-    trustStatus: hook.trustStatus ?? null,
-    currentHash: hook.currentHash ?? null
-  }));
-
-  const runnable = normalized.some((hook) => {
-    if (!hook.enabled) return false;
-    if (hook.isManaged) return true;
-    return hook.trustStatus !== "untrusted" && hook.trustStatus !== "changed" && hook.trustStatus !== null;
-  });
-
-  const report = {
-    cwd,
-    codexDiscoveredSidecarHook: normalized.length > 0,
-    codexReportsRunnableHook: runnable,
-    hooks: normalized,
-    modelTurnStarted: false,
-    desktopExecutionStillRequiresLiveConfirmation: true
-  };
-
-  console.log(JSON.stringify(report, null, 2));
-  process.exit(runnable ? 0 : 1);
+  const sidecarHooks = allHooks.filter((hook) => isSidecarHookGroup(hook));
+  console.log(JSON.stringify({ cwd, sidecarHooks, modelTurnStarted: false }, null, 2));
+  process.exit(sidecarHooks.length ? 0 : 1);
 }
 
 if (command === "install-global-hook") {
@@ -213,14 +307,14 @@ if (command === "install-global-hook") {
 }
 
 if (command === "uninstall-global-hook") {
-  uninstallGlobalHook();
+  removeSidecarHookEntry({ removeRuntime: true });
+  console.log("Removed the Sidecar global hook and runtime. Existing non-Sidecar hooks were preserved.");
   process.exit(0);
 }
 
 if (command === "install-slash-alias") {
   const destination = installSlashAlias(codexHomePath());
   console.log(`Installed Sidecar slash alias at ${destination}`);
-  console.log("Restart Codex, then use: /prompts:sidecar plan <request>");
   process.exit(0);
 }
 
@@ -241,4 +335,4 @@ if (command === "bundle") {
   process.exit(0);
 }
 
-console.log(`Codex ChatGPT Sidecar\n\nCommands:\n  doctor                   Check local requirements and global-hook file status\n  verify-hook [cwd]        Ask Codex App Server whether Sidecar is discovered/trusted (no model turn)\n  install-global-hook      Install Sidecar in ~/.codex/hooks.json\n  uninstall-global-hook    Remove only the Sidecar global hook/runtime\n  install-slash-alias      Install /prompts:sidecar into Codex home\n  bundle [request]         Build a repo-only ChatGPT handoff\n\nInside Codex after verification:\n  sidecar: plan <request>          Most deterministic trigger\n  $sidecar plan <request>          Bundled skill trigger\n  /prompts:sidecar plan <request>  Optional slash alias\n\nNote: current Codex does not support plugin-defined literal /sidecar commands.`);
+console.log(`ChatGPT Sidecar\n\nRecommended hook-free setup:\n  node ./bin/sidecar.mjs install-launcher\n\nThen use either:\n  Ctrl+Alt+S\n  sidecar plan "your request"\n\nCommands:\n  launch [plan|debug|review|general] [request]\n  install-launcher       Install the external Windows launcher and remove Sidecar hooks\n  doctor                 Verify saved sessions and launcher status\n  bundle [request]       Build a repo-only handoff\n\nLegacy compatibility commands:\n  verify-hook [cwd]\n  install-global-hook\n  uninstall-global-hook\n  install-slash-alias\n\nThe external launcher reads ~/.codex/sessions directly and never submits a Codex model turn.`);
