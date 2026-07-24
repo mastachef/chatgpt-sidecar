@@ -1,3 +1,5 @@
+https://i.imgur.com/xfmBoS9.jpeg
+
 # ChatGPT Sidecar
 
 A Codex companion that offloads planning, debugging, review, and repository investigation to ChatGPT **before Codex starts a model turn**.
