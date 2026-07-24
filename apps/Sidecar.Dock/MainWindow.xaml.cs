@@ -1,6 +1,7 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using ChatGPT.Sidecar.Dock.ChatGPT;
+using ChatGPT.Sidecar.Dock.Browser;
 using ChatGPT.Sidecar.Dock.CodexContext;
 using ChatGPT.Sidecar.Dock.Docking;
 using ChatGPT.Sidecar.Dock.RepositoryContext;
