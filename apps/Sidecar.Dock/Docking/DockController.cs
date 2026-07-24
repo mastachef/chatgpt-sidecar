@@ -28,6 +28,12 @@ internal sealed class DockController : IDisposable
         _timer.Tick += (_, _) => UpdateDockPosition();
     }
 
+    // Kept for source compatibility with the previous constructor. The locator is deliberately ignored:
+    // Sidecar no longer auto-selects or auto-magnets to any window.
+    public DockController(Window sidecarWindow, CodexWindowLocator _) : this(sidecarWindow)
+    {
+    }
+
     public bool IsFollowing { get; set; } = true;
 
     public event EventHandler<string>? StatusChanged;
@@ -66,6 +72,15 @@ internal sealed class DockController : IDisposable
         UpdateDockPosition();
         result = label;
         return true;
+    }
+
+    // Legacy call target retained only so older code still compiles. It clears the pin and does not perform detection.
+    public void UseAutomaticTargeting()
+    {
+        _manualTarget = null;
+        _lastDockedWindow = null;
+        ReportTarget("No target selected");
+        ReportStatus("Automatic targeting is disabled. Drag Attach onto the Codex window.");
     }
 
     private void UpdateDockPosition()
