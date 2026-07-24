@@ -45,6 +45,8 @@ internal static class ThemeManager
         new("system", "System")
     ];
 
+    internal static string CurrentThemeId { get; private set; } = "codex-green";
+
     internal static string ApplySavedTheme()
     {
         var saved = "codex-green";
@@ -70,7 +72,8 @@ internal static class ThemeManager
 
     internal static void Apply(string themeId, bool persist = true)
     {
-        var resolvedId = themeId == "system" ? ResolveSystemTheme() : themeId;
+        CurrentThemeId = Options.Any(option => option.Id == themeId) ? themeId : "codex-green";
+        var resolvedId = CurrentThemeId == "system" ? ResolveSystemTheme() : CurrentThemeId;
         var palette = resolvedId switch
         {
             "light" => new ThemePalette(
@@ -111,7 +114,7 @@ internal static class ThemeManager
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
-                File.WriteAllText(SettingsPath, JsonSerializer.Serialize(new ThemeSettings(themeId)));
+                File.WriteAllText(SettingsPath, JsonSerializer.Serialize(new ThemeSettings(CurrentThemeId)));
             }
             catch
             {
