@@ -15,13 +15,25 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
-      - name: Restore
-        run: dotnet restore apps/Sidecar.Dock/Sidecar.Dock.csproj
-      - name: Build
-        run: dotnet build apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --no-restore
+          show-progress: false
+      - name: Restore and build with compact diagnostics
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $project = 'apps/Sidecar.Dock/Sidecar.Dock.csproj'
+          $log = Join-Path $env:RUNNER_TEMP 'sidecar-build.log'
+          dotnet restore $project *> $log
+          if ($LASTEXITCODE -eq 0) {
+            dotnet build $project --configuration Release --no-restore *> $log
+          }
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host '=== SIDECAR BUILD ERRORS ==='
+            Get-Content $log | Where-Object { $_ -match 'error (CS|MC|MSB|NETSDK|NU|XDG)|: error ' } | Select-Object -First 80
+            Write-Host '=== END SIDECAR BUILD ERRORS ==='
+            exit 1
+          }
+          Get-Content $log | Select-Object -Last 20
       - name: Publish portable alpha
         run: dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -o artifacts/Sidecar.Dock-win-x64
       - uses: actions/upload-artifact@v4
