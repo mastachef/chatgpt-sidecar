@@ -22,7 +22,7 @@
   "interface": {
     "displayName": "Sidecar",
     "shortDescription": "Preserve Codex usage and hand completed work back",
-    "longDescription": "Sidecar is a native Windows companion app that pins beside the exact Codex desktop window, hosts a persistent ChatGPT session, gathers bounded local Codex and repository context, offloads planning and debugging, and then generates a detailed prompt that can be copied back into Codex for implementation.",
+    "longDescription": "Sidecar is a native Windows companion app that pins beside the exact Codex desktop window, hosts a persistent ChatGPT session, gathers bounded local Codex and repository context, offloads planning and debugging, and then generates a detailed return-to-Codex handoff prompt for implementation.",
     "developerName": "mastachef",
     "category": "Developer Tools",
     "capabilities": [
