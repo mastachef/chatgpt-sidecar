@@ -16,19 +16,27 @@ internal sealed class CodexSessionReader
 
     public CodexSession? FindLatestRootSession(int maxCandidates = 300)
     {
+        return ListRecentRootSessions(maxCandidates, 1).FirstOrDefault();
+    }
+
+    public IReadOnlyList<CodexSession> ListRecentRootSessions(
+        int maxCandidates = 500,
+        int maxResults = 30)
+    {
         var sessionsRoot = Path.Combine(_codexHome, "sessions");
-        if (!Directory.Exists(sessionsRoot))
+        if (!Directory.Exists(sessionsRoot) || maxResults <= 0)
         {
-            return null;
+            return Array.Empty<CodexSession>();
         }
 
         var candidates = Directory
             .EnumerateFiles(sessionsRoot, "*.jsonl", SearchOption.AllDirectories)
             .Select(path => new FileInfo(path))
             .OrderByDescending(file => file.LastWriteTimeUtc)
-            .Take(maxCandidates);
+            .Take(Math.Max(1, maxCandidates));
 
-        CodexSession? newestAny = null;
+        var sessions = new List<CodexSession>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var candidate in candidates)
         {
             CodexSession? parsed;
@@ -41,19 +49,27 @@ internal sealed class CodexSessionReader
                 continue;
             }
 
-            if (parsed is null || parsed.Messages.Count == 0)
+            if (parsed is null || parsed.IsSubagent || parsed.Messages.Count == 0)
             {
                 continue;
             }
 
-            newestAny ??= parsed;
-            if (!parsed.IsSubagent)
+            var identity = parsed.ThreadId
+                ?? parsed.SessionId
+                ?? Path.GetFullPath(parsed.RolloutPath);
+            if (!seen.Add(identity))
             {
-                return parsed;
+                continue;
+            }
+
+            sessions.Add(parsed);
+            if (sessions.Count >= maxResults)
+            {
+                break;
             }
         }
 
-        return newestAny;
+        return sessions;
     }
 
     internal static CodexSession? Parse(string path)
