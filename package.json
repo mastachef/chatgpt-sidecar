@@ -1,13 +1,14 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.5.0",
-  "description": "Read saved Codex sessions and hand them to ChatGPT without submitting a Codex model turn.",
+  "version": "0.6.0",
+  "description": "Bring the active Codex conversation and repository into ChatGPT Quick Chat without starting another Codex model turn.",
   "type": "module",
   "bin": {
     "codex-sidecar": "./bin/sidecar.mjs"
   },
   "scripts": {
     "test": "node --test",
+    "mcp": "node ./mcp/server.mjs --stdio",
     "doctor": "node ./bin/sidecar.mjs doctor",
     "install-launcher": "node ./bin/sidecar.mjs install-launcher",
     "launch": "node ./bin/sidecar.mjs launch",
@@ -19,6 +20,8 @@
   "keywords": [
     "codex",
     "chatgpt",
+    "mcp",
+    "quick-chat",
     "sidecar",
     "developer-tools"
   ],
