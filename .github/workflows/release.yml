@@ -182,17 +182,12 @@ jobs:
           description: Sidecar
           description-url: https://github.com/mastachef/chatgpt-sidecar
 
-      - name: Block unsigned public release
+      - name: Skip unsigned public release
         if: steps.signing.outputs.mode == 'none'
         shell: pwsh
         run: |
-          throw @'
-          Public Sidecar releases must be Authenticode-signed. No trusted signing configuration is present, so this workflow will NOT publish another Unknown publisher executable.
-
-          Configure either:
-          1. SignPath Foundation/Open Source signing: SIGNPATH_API_TOKEN, SIGNPATH_ORGANIZATION_ID, SIGNPATH_PROJECT_SLUG, SIGNPATH_SIGNING_POLICY_SLUG
-          2. Microsoft Artifact Signing Public Trust: AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, ARTIFACT_SIGNING_ENDPOINT, ARTIFACT_SIGNING_ACCOUNT_NAME, ARTIFACT_SIGNING_CERT_PROFILE_NAME
-          '@
+          Write-Warning 'Trusted signing is not configured yet. The build and tests succeeded, but no public Sidecar release will be published.'
+          Write-Host 'Configure SignPath or Microsoft Artifact Signing to enable publishing. Unsigned Sidecar.exe remains restricted to the short-lived Actions artifact only.'
 
       - name: Verify Authenticode signature
         if: steps.signing.outputs.mode != 'none'
