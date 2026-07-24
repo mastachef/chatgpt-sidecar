@@ -42,11 +42,12 @@ public sealed class SidecarDiagnosticsTests
             var diagnostics = new SidecarDiagnostics(path);
             diagnostics.Record("test.event", ("message", "first line\r\nsecond line"));
 
-            var line = File.ReadAllText(path);
+            var lines = File.ReadAllLines(path);
 
-            Assert.Contains("message=first line  second line", line, StringComparison.Ordinal);
-            Assert.DoesNotContain("\r", line, StringComparison.Ordinal);
-            Assert.Equal(1, line.Count(character => character == '\n'));
+            Assert.Single(lines);
+            Assert.Contains("message=first line  second line", lines[0], StringComparison.Ordinal);
+            Assert.DoesNotContain("\r", lines[0], StringComparison.Ordinal);
+            Assert.DoesNotContain("\n", lines[0], StringComparison.Ordinal);
         }
         finally
         {
