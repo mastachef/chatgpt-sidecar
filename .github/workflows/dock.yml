@@ -27,7 +27,30 @@ jobs:
       - name: Build native dock
         run: dotnet build apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --no-restore
       - name: Run native tests
-        run: dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=minimal"
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'sidecar-tests.log'
+          dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj `
+            --configuration Release `
+            --no-restore `
+            --logger "console;verbosity=normal" *> $log
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host '=== SIDECAR TEST FAILURE ==='
+            Get-Content $log | Where-Object {
+              $_ -match '^\s*Failed ' -or
+              $_ -match '^\s*Error Message:' -or
+              $_ -match '^\s*Stack Trace:' -or
+              $_ -match '^\s*Expected:' -or
+              $_ -match '^\s*Actual:' -or
+              $_ -match 'Assert\.' -or
+              $_ -match '\[FAIL\]'
+            } | Select-Object -First 120
+            Write-Host '=== END SIDECAR TEST FAILURE ==='
+            exit 1
+          }
+
+          Get-Content $log | Select-Object -Last 20
       - name: Publish single-file Windows alpha
         run: >-
           dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj
