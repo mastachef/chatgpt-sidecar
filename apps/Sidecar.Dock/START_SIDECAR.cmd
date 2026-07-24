@@ -2,18 +2,18 @@
 setlocal
 cd /d "%~dp0"
 
-set "APP=ChatGPT.Sidecar.Dock.exe"
+set "APP=Sidecar.exe"
 set "LOG=%LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\startup-crash.log"
 
 if not exist "%APP%" (
-  echo ChatGPT.Sidecar.Dock.exe was not found beside this launcher.
+  echo Sidecar.exe was not found beside this launcher.
   echo Extract the entire ZIP to a normal folder before running Sidecar.
   echo.
   pause
   exit /b 2
 )
 
-echo Starting ChatGPT Sidecar Dock...
+echo Starting Sidecar...
 "%APP%"
 set "EXIT_CODE=%ERRORLEVEL%"
 
