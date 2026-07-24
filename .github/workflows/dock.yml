@@ -16,26 +16,28 @@ jobs:
   build-test-publish:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          show-progress: false
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-      - name: Build diagnostic
+      - name: Exact build diagnostic
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Continue'
+          git init source | Out-Null
+          Set-Location source
+          git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
+          git fetch --quiet --depth 1 origin $env:GITHUB_REF
+          git checkout --quiet FETCH_HEAD
+
           $project = 'apps/Sidecar.Dock/Sidecar.Dock.csproj'
           $log = Join-Path $env:RUNNER_TEMP 'sidecar-build.log'
           dotnet restore apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj *> $log
           if ($LASTEXITCODE -eq 0) {
             dotnet build $project --configuration Release --no-restore *>> $log
           }
+
           if ($LASTEXITCODE -ne 0) {
             Write-Host '=== SIDECAR BUILD ERRORS ==='
-            Get-Content $log | Where-Object { $_ -match 'error (CS|MC|MSB|NETSDK|NU|XDG)|: error ' } | Select-Object -First 100
+            Get-Content $log | Where-Object { $_ -match 'error (CS|MC|MSB|NETSDK|NU|XDG)|: error |Canonical Sidecar icon|exited with code' } | Select-Object -First 100
             Write-Host '=== END SIDECAR BUILD ERRORS ==='
             exit 1
           }
+
           Get-Content $log | Select-Object -Last 30
