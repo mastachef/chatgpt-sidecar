@@ -43,6 +43,7 @@ jobs:
         run: |
           $publish = Join-Path $PWD 'artifacts/Sidecar-win-x64'
           $exe = Join-Path $publish 'Sidecar.exe'
+          $oldExe = Join-Path $publish 'ChatGPT.Sidecar.Dock.exe'
           $launcher = Join-Path $publish 'START_SIDECAR.cmd'
           $readme = Join-Path $publish 'README-FIRST.txt'
           $startupLog = Join-Path $env:LOCALAPPDATA 'ChatGPTSidecar/Diagnostics/startup-crash.log'
@@ -52,6 +53,17 @@ jobs:
               throw "Required published file missing: $required"
             }
           }
+
+          if (Test-Path $oldExe) {
+            throw "Legacy executable name is still being published: $oldExe"
+          }
+
+          Add-Type -AssemblyName System.Drawing
+          $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($exe)
+          if ($null -eq $icon -or $icon.Width -lt 16 -or $icon.Height -lt 16) {
+            throw 'Sidecar.exe does not contain a valid Windows application icon.'
+          }
+          $icon.Dispose()
 
           Remove-Item $startupLog -Force -ErrorAction SilentlyContinue
           $process = Start-Process -FilePath $exe -ArgumentList '--startup-smoke-test' -Wait -PassThru
