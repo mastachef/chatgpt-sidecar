@@ -27,6 +27,7 @@
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
             <ToggleButton x:Name="FollowCodexToggle" Content="Follow Codex" IsChecked="True" Margin="8,0,0,0" Padding="10,5" Checked="FollowCodexToggle_OnChanged" Unchecked="FollowCodexToggle_OnChanged" />
             <Button Content="Reload ChatGPT" Margin="8,0,0,0" Padding="10,5" Click="ReloadChatGpt_OnClick" />
+            <Button Content="Copy diagnostics" Margin="8,0,0,0" Padding="10,5" Click="CopyDiagnostics_OnClick" />
           </StackPanel>
         </DockPanel>
 
@@ -76,10 +77,17 @@
     <wv2:WebView2 x:Name="ChatGptWebView" Grid.Row="1" DefaultBackgroundColor="#101214" />
 
     <Border Grid.Row="2" Background="{StaticResource CardBackgroundBrush}" Padding="10,7" BorderBrush="#2C3138" BorderThickness="0,1,0,0">
-      <DockPanel>
-        <TextBlock x:Name="StatusText" Text="Starting Sidecar..." Foreground="{StaticResource SecondaryTextBrush}" />
-        <TextBlock DockPanel.Dock="Right" Text="Populate-only alpha: review before sending" Foreground="{StaticResource SecondaryTextBrush}" />
-      </DockPanel>
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0">
+          <TextBlock x:Name="StatusText" Text="Starting Sidecar..." Foreground="{StaticResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" />
+          <TextBlock x:Name="BrowserStatusText" Text="WebView: initializing" Margin="0,2,0,0" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+        <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Populate-only alpha" Foreground="{StaticResource SecondaryTextBrush}" />
+      </Grid>
     </Border>
   </Grid>
 </Window>

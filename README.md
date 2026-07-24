@@ -4,7 +4,7 @@
 
 A native Windows companion panel that magnetically attaches to the ChatGPT/Codex desktop window, reads a selected saved Codex conversation and its repository locally, and prepares that context inside an embedded ChatGPT session without submitting another prompt to Codex.
 
-> **Current status: v0.8.1-alpha.1.** The native dock builds, passes automated Node and .NET tests, and publishes a portable Windows artifact. The remaining feasibility gate is live validation of ChatGPT login and composer behavior inside WebView2.
+> **Current status: v0.8.1-alpha.2.** The native dock builds, passes automated Node and .NET tests, publishes a portable Windows artifact, and now includes privacy-safe live WebView/composer diagnostics. The remaining feasibility gate is validation on a real Windows ChatGPT session.
 
 ## What the alpha does
 
@@ -20,6 +20,7 @@ A native Windows companion panel that magnetically attaches to the ChatGPT/Codex
 - Builds a previewable, size-limited context package.
 - Populates the ChatGPT composer for the user to review and send.
 - Falls back to the clipboard when the composer cannot be safely identified.
+- Records WebView runtime, navigation, process, and composer-probe diagnostics without logging context contents.
 
 The alpha deliberately does **not** auto-submit. Populate-only behavior remains the safety gate until the embedded ChatGPT workflow proves stable.
 
@@ -58,6 +59,26 @@ On first launch, sign into ChatGPT inside the Sidecar panel. The browser profile
 
 Nothing is typed into the Codex composer and no Codex thread is resumed or started.
 
+## Live validation and diagnostics
+
+Follow [`docs/live-validation.md`](docs/live-validation.md) to validate docking, login persistence, thread selection, privacy, and composer population.
+
+Click **Copy diagnostics** after any failure. The copied report includes:
+
+- app, .NET, Windows, and architecture versions
+- WebView2 runtime version
+- sanitized route categories such as `/auth/*` or `/c/*`
+- WebView process failures
+- the composer selector, candidate count, and failure reason
+
+It does **not** include the Codex conversation, request, repository contents, Git diffs, ChatGPT messages, or full conversation URLs.
+
+The rolling local log is stored at:
+
+```text
+%LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\sidecar-dock.log
+```
+
 ## Native project structure
 
 ```text
@@ -65,6 +86,7 @@ apps/
 ├── Sidecar.Dock/
 │   ├── ChatGPT/              Persistent WebView2 host and composer adapter
 │   ├── CodexContext/         Rollout parser, thread list, and package builder
+│   ├── Diagnostics/          Privacy-bounded runtime validation log
 │   ├── Docking/              Magnetic dock controller
 │   ├── Interop/              Win32 window APIs
 │   ├── RepositoryContext/    Git, manifests, and referenced-file collection
@@ -73,7 +95,7 @@ apps/
 │   ├── App.xaml
 │   ├── MainWindow.xaml
 │   └── Sidecar.Dock.csproj
-└── Sidecar.Dock.Tests/       Native parser, file-safety, and redaction tests
+└── Sidecar.Dock.Tests/       Native parser, file-safety, redaction, and diagnostics tests
 ```
 
 ## Build, test, and publish
@@ -113,6 +135,7 @@ If ChatGPT blocks or behaves unreliably inside WebView2, the fallback architectu
 - Referenced files are restricted to bounded text files inside the selected repository.
 - Context is size-limited and previewable before it is placed into ChatGPT.
 - Sidecar does not automatically include `.env`, private-key, credential, dependency, build-output, or arbitrary untracked files.
+- Runtime diagnostics intentionally exclude context payloads and file contents.
 - Repository and conversation content are treated as untrusted data, not instructions.
 
 Review sensitive context before sending it to ChatGPT.
@@ -124,9 +147,10 @@ The Node MCP, hook, shortcut, hotkey, and PowerShell UI-automation experiments r
 ## Roadmap
 
 - `v0.8.0-alpha`: WebView2 and magnetic-dock feasibility scaffold
-- `v0.8.1-alpha`: recent root-thread picker, safe referenced files, redaction, tests, portable artifact
+- `v0.8.1-alpha.1`: root-thread picker, safe referenced files, redaction, tests, portable artifact
+- `v0.8.1-alpha.2`: live WebView/composer diagnostics and validation checklist
 - `v0.8.2-beta`: validated context-to-ChatGPT workflow and resilient selector profiles
-- `v0.9.0-beta`: installer, diagnostics, updates, and public testing
+- `v0.9.0-beta`: installer, updates, and public testing
 - `v1.0.0`: signed stable Windows release
 
 ## License
