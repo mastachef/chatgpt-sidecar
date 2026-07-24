@@ -2,14 +2,15 @@
 
 # ChatGPT Sidecar Dock
 
-A native Windows companion panel that magnetically attaches to the ChatGPT/Codex desktop window, reads a selected saved Codex conversation and its repository locally, and prepares that context inside an embedded ChatGPT session without submitting another prompt to Codex.
+A native Windows companion panel that attaches to the exact ChatGPT/Codex desktop window selected by the user, reads a selected saved Codex conversation and its repository locally, and prepares that context inside an embedded ChatGPT session without submitting another prompt to Codex.
 
-> **Current status: v0.8.1-alpha.3.** The native dock builds, passes automated Node and .NET tests, publishes a self-contained single-file Windows artifact, and includes crash-safe startup plus privacy-safe WebView/composer diagnostics. The remaining feasibility gate is validation on a real Windows ChatGPT session.
+> **Current status: v0.8.1-alpha.4.** The native dock builds, passes automated Node and .NET tests, publishes a self-contained single-file Windows artifact, includes crash-safe startup, and now supports manual drag-to-attach window targeting so Sidecar does not have to guess which desktop window is Codex.
 
 ## What the alpha does
 
-- Finds the visible Codex/ChatGPT desktop window.
-- Magnetically docks to its edge and follows movement and resizing.
+- Provides an **Attach** handle that can be dragged over the real Codex window and released.
+- Pins Sidecar to that exact Windows window handle and follows its movement and resizing.
+- Keeps automatic Codex detection as an optional fallback through **Auto target**.
 - Hosts `chatgpt.com` in a persistent WebView2 profile.
 - Lists recent saved **root** Codex threads and excludes subagent rollouts.
 - Lets the user explicitly select the conversation to send.
@@ -29,7 +30,10 @@ The alpha deliberately does **not** auto-submit. Populate-only behavior remains 
 1. Extract the entire ZIP to a normal folder. Do not run the EXE from inside Windows' compressed-folder preview.
 2. Open the extracted folder.
 3. Run `ChatGPT.Sidecar.Dock.exe`.
-4. If the process appears to do nothing, run `START_SIDECAR.cmd`. It shows the exit code and opens the startup report automatically.
+4. Hold the **Attach** handle, drag the cursor over the actual Codex window, and release.
+5. Confirm the target label changes to `Pinned: <window title>` and Sidecar snaps beside that window.
+6. Use **Auto target** only when you want to return to automatic detection.
+7. If the process appears to do nothing, run `START_SIDECAR.cmd`. It shows the exit code and opens the startup report automatically.
 
 The startup report is stored at:
 
@@ -65,14 +69,25 @@ On first launch, sign into ChatGPT inside the Sidecar panel. The browser profile
 
 1. Open the Codex project and conversation you are working on.
 2. Launch **ChatGPT Sidecar Dock**.
-3. The panel finds and attaches to Codex.
-4. Choose the correct recent root Codex thread from the thread picker.
-5. Enter a planning, debugging, review, or general request.
-6. Click **Preview context** to inspect exactly what will be provided.
-7. Click **Prepare in ChatGPT**.
-8. Review the populated ChatGPT composer and press Send.
+3. Drag **Attach** over the real Codex window and release.
+4. Sidecar pins itself to that exact window and follows it.
+5. Choose the correct recent root Codex thread from the thread picker.
+6. Enter a planning, debugging, review, or general request.
+7. Click **Preview context** to inspect exactly what will be provided.
+8. Click **Prepare in ChatGPT**.
+9. Review the populated ChatGPT composer and press Send.
 
 Nothing is typed into the Codex composer and no Codex thread is resumed or started.
+
+## Window targeting behavior
+
+Manual targeting is authoritative:
+
+- **Attach drag succeeds:** Sidecar follows only the selected window handle.
+- **Selected window is minimized:** Sidecar waits for it to be restored.
+- **Selected window closes:** Sidecar stops following and asks for another Attach drag rather than jumping to a random window.
+- **Auto target:** clears the manual pin and re-enables heuristic Codex detection.
+- **Follow:** temporarily enables or disables movement without changing the selected target.
 
 ## Live validation and diagnostics
 
@@ -102,11 +117,11 @@ apps/
 │   ├── ChatGPT/              Persistent WebView2 host and composer adapter
 │   ├── CodexContext/         Rollout parser, thread list, and package builder
 │   ├── Diagnostics/          Startup and privacy-bounded runtime diagnostics
-│   ├── Docking/              Magnetic dock controller
-│   ├── Interop/              Win32 window APIs
+│   ├── Docking/              Manual and automatic magnetic docking controller
+│   ├── Interop/              Win32 window and cursor APIs
 │   ├── RepositoryContext/    Git, manifests, and referenced-file collection
 │   ├── Security/             Credential redaction
-│   ├── WindowDetection/      Codex/ChatGPT window detection
+│   ├── WindowDetection/      Automatic locator and drag target picker
 │   ├── App.xaml
 │   ├── MainWindow.xaml
 │   └── Sidecar.Dock.csproj
@@ -138,7 +153,7 @@ The project does not advance to a public beta until all of these pass:
 2. Login persists after restarting Sidecar.
 3. The ChatGPT composer can be identified without relying on one brittle selector.
 4. Populating the composer never writes into an unknown field.
-5. Magnetic docking remains stable while moving, resizing, maximizing, minimizing, and switching monitors.
+5. Manual docking remains stable while moving, resizing, maximizing, minimizing, and switching monitors.
 6. The selected Codex thread and repository match what the user intends to share.
 
 If ChatGPT blocks or behaves unreliably inside WebView2, the fallback architecture is to dock the official ChatGPT window instead of embedding the site.
@@ -166,6 +181,7 @@ The Node MCP, hook, shortcut, hotkey, and PowerShell UI-automation experiments r
 - `v0.8.1-alpha.1`: root-thread picker, safe referenced files, redaction, tests, portable artifact
 - `v0.8.1-alpha.2`: live WebView/composer diagnostics and validation checklist
 - `v0.8.1-alpha.3`: crash-safe startup, single-file publish, and packaged startup smoke test
+- `v0.8.1-alpha.4`: drag-to-attach exact window targeting
 - `v0.8.2-beta`: validated context-to-ChatGPT workflow and resilient selector profiles
 - `v0.9.0-beta`: installer, updates, and public testing
 - `v1.0.0`: signed stable Windows release
