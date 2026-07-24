@@ -2,11 +2,11 @@
 
 # Sidecar
 
-**Preserve precious Codex usage by offloading planning, debugging, code review, and repository analysis to ChatGPT—then return the finished work to Codex as a detailed implementation handoff.**
+**Use ChatGPT for planning, debugging, review, and repository analysis while keeping Codex focused on implementation.**
 
-Sidecar is a native Windows companion for the ChatGPT/Codex desktop app. It stays put until you manually attach it to the exact Codex window you choose, reads a selected saved Codex conversation and bounded repository context locally, and prepares that context inside an embedded ChatGPT session without submitting another prompt to the Codex thread.
+Sidecar is a native Windows companion for Codex. It attaches only to the exact Codex window you choose, reads a selected saved Codex conversation plus bounded local repository context, and prepares that context inside an embedded ChatGPT session. When the planning work is finished, Sidecar turns the result into a detailed handoff you can paste back into Codex.
 
-> **Current source version: v0.8.1-alpha.8**
+Sidecar never submits a Codex prompt on your behalf.
 
 ## Screenshots
 
@@ -16,15 +16,13 @@ Sidecar is a native Windows companion for the ChatGPT/Codex desktop app. It stay
   <img src="https://i.imgur.com/TE1iGrK.png" width="100%" alt="Codex with Sidecar attached" />
 </p>
 
-<p align="center"><em>Sidecar attached beside Codex while working from the same project and saved conversation context.</em></p>
-
 ### Sidecar
 
 <p align="center">
   <img src="https://i.imgur.com/tTH2qWz.png" width="520" alt="Sidecar Windows application" />
 </p>
 
-### Theme examples
+### Themes
 
 <p align="center">
   <img src="https://i.imgur.com/HADIHwh.png" width="48%" alt="Sidecar theme example 1" />
@@ -36,115 +34,80 @@ Sidecar is a native Windows companion for the ChatGPT/Codex desktop app. It stay
   <img src="https://i.imgur.com/C8AjkwS.png" width="48%" alt="Sidecar theme example 4" />
 </p>
 
-## The workflow
+## Workflow
 
 ```text
-Codex context → Sidecar/ChatGPT planning → detailed Codex handoff → Codex implementation
+Codex context → Sidecar / ChatGPT planning → implementation handoff → Codex
 ```
 
 1. Open the Codex project and conversation you are working on.
-2. Run `Sidecar.exe` and sign into ChatGPT inside Sidecar.
-3. Drag **Attach** over the exact Codex window and release.
-4. Select the correct saved root Codex thread.
+2. Start Sidecar and sign into ChatGPT in the embedded browser.
+3. Drag **Attach** onto the exact Codex window you want Sidecar to follow.
+4. Select the saved root Codex thread you want to use.
 5. Enter a Plan, Debug, Review, or General request.
-6. Select **Preview**, then **Prepare in ChatGPT**, review the populated message, and send it.
-7. After the ChatGPT work is complete, select **Prepare handoff**.
-8. Send the handoff request in ChatGPT.
-9. When ChatGPT finishes, select **Copy latest reply** and paste that detailed prompt into Codex.
+6. Use **Preview** to inspect the context, then **Prepare in ChatGPT**.
+7. Review and send the prepared message in ChatGPT.
+8. When the work is complete, use **Prepare handoff**, then **Copy latest reply**.
+9. Paste the finished implementation handoff into Codex.
 
-Sidecar populates prompts but does **not** auto-submit them.
+## Features
 
-## Current features
-
-- **Manual-only docking:** Sidecar never guesses or auto-selects a window. It moves only after you drag **Attach** onto a specific window.
-- **Persistent ChatGPT session:** sign in once through the embedded WebView2 browser.
-- **Codex context reader:** choose recent saved root Codex conversations; subagent rollouts are excluded.
-- **Repository context:** bounded Git status, staged and unstaged diffs, recent commits, instructions, manifests, and referenced files.
-- **Context preview:** inspect exactly what will be placed into ChatGPT.
-- **Return-to-Codex handoff:** asks ChatGPT for a self-contained implementation prompt covering decisions, files, steps, constraints, errors, tests, unresolved questions, and the next action.
-- **Copy latest reply:** copies the completed ChatGPT handoff directly to the clipboard.
-- **Built-in updater:** Sidecar checks GitHub Releases at startup and exposes an **Updates** button. New builds are downloaded and installed from inside Sidecar instead of requiring another manual EXE download.
-- **Verified updates:** before replacement, Sidecar verifies the GitHub release asset SHA-256 digest and requires a valid trusted Authenticode signature. If the running build is already signed, the update must be signed by the same publisher.
-- **Secret protection:** excludes sensitive file categories and redacts common credentials and tokens on a best-effort basis.
-- **Codex-style themes:** Codex Green, Codex Dark, Midnight, Light, and System.
-- **Fully themed window chrome:** the title bar, app icon, title text, minimize/maximize/close controls, cards, dropdowns, and footer all follow the selected Sidecar theme.
-- **Readable themed controls:** dropdown selections and popup items use explicit theme-aware text and backgrounds.
-- **Clean Windows app:** self-contained `Sidecar.exe` using the supplied chrome-car artwork.
-- **Privacy-safe diagnostics:** startup and browser diagnostics exclude conversation and repository contents.
+- **Manual window attachment** — Sidecar never guesses which window to use.
+- **Persistent ChatGPT session** — WebView2 keeps your ChatGPT login between launches.
+- **Saved Codex context** — choose recent root Codex conversations without resuming or submitting them.
+- **Repository context** — bounded Git status, diffs, recent commits, project files, and referenced files.
+- **Context preview** — inspect exactly what will be prepared before it reaches ChatGPT.
+- **Return-to-Codex handoff** — produce a self-contained implementation prompt for Codex.
+- **Secret filtering** — sensitive file categories are excluded and common credential patterns are redacted on a best-effort basis.
+- **Native themes** — Codex Green, Codex Dark, Midnight, Light, and System, including the custom title bar.
+- **Secure updater** — GitHub updates require both the release SHA-256 digest and a valid trusted Authenticode signature before replacement.
+- **Privacy-safe diagnostics** — diagnostics exclude conversation text, repository contents, diffs, and ChatGPT messages.
 
 ## Download
 
-Download the latest release from **[GitHub Releases](https://github.com/mastachef/chatgpt-sidecar/releases/latest)**.
+GitHub Releases are Sidecar's portable distribution channel:
 
-For a normal manual download, choose:
+**[Download from GitHub Releases](https://github.com/mastachef/chatgpt-sidecar/releases/latest)**
 
-- `Sidecar-Portable-win-x64.exe` — the clearly labeled portable single-file build; place it in any normal user-writable folder and run it directly.
+New trusted releases publish two byte-identical signed executables:
 
-The release also contains:
+- `Sidecar-Portable-win-x64.exe` — clearly named manual/portable download.
+- `Sidecar.exe` — canonical asset used by the built-in updater.
 
-- `Sidecar.exe` — the identical signed canonical executable retained for Sidecar's built-in updater.
-- `README-FIRST.txt` — short setup, handoff, and troubleshooting guidance.
+The portable build is self-contained and does not require the .NET SDK or a separate .NET runtime installation.
 
-The portable build does not require an installer or a .NET SDK/runtime installation. After the first run, Sidecar can pull newer signed releases from GitHub using its built-in updater.
+Every public executable must pass trusted Authenticode verification before the release workflow can publish it. See [Code signing](docs/CODE_SIGNING.md).
 
 ### Microsoft Store
 
-Microsoft Store packaging is being prepared as a separate MSIX distribution path. The Store build will install/update through Microsoft while GitHub Releases remain the portable option.
-
-See **[Microsoft Store publishing plan](docs/MICROSOFT_STORE.md)**.
-
-### Code signing policy
-
-Every public Sidecar executable must be produced by the repository's automated release build and carry a valid trusted Authenticode signature before it can be published. If signing is unavailable or verification fails, the release workflow stops instead of publishing an unsigned executable. See **[Sidecar code signing policy](docs/CODE_SIGNING.md)** for the full policy and SignPath/Microsoft setup.
+A separate MSIX distribution is being prepared for Microsoft Store installation and Store-managed updates. See [Microsoft Store publishing](docs/MICROSOFT_STORE.md).
 
 ## Updates
 
-Sidecar quietly checks recent GitHub Releases when it starts. You can also use the **Updates** button in the header to check manually.
+Sidecar checks GitHub Releases when it starts and also provides an **Updates** button.
 
-When a newer release is available, Sidecar:
+Before replacing the running executable, it:
 
-1. downloads the published `Sidecar.exe` to a staging folder under `%LOCALAPPDATA%\ChatGPTSidecar\Updates`
-2. verifies the SHA-256 digest reported by GitHub for that release asset
-3. requires Windows to report a valid trusted Authenticode signature on the downloaded executable
-4. requires the same signer as the currently running build when the current build is already signed
-5. closes Sidecar, swaps the executable with rollback protection, and restarts the updated copy
+1. downloads the canonical `Sidecar.exe` release asset to `%LOCALAPPDATA%\ChatGPTSidecar\Updates`;
+2. verifies GitHub's SHA-256 asset digest locally;
+3. requires Windows to report a valid trusted Authenticode signature;
+4. requires the same publisher as the running build when the current build is signed;
+5. replaces the executable only after Sidecar exits, with rollback protection, then restarts it.
 
-The updater will not replace the running executable when integrity or signature validation fails.
-
-## Themes
-
-Choose a theme from the Sidecar header. The choice is saved automatically and applies to the entire native Sidecar shell, including the custom title bar.
-
-| Theme | Appearance |
-|---|---|
-| Codex Green | Near-black surfaces with muted terminal-green text and accents |
-| Codex Dark | Neutral charcoal Codex-style interface |
-| Midnight | Deep navy and violet styling inspired by the Sidecar artwork |
-| Light | Bright high-contrast interface |
-| System | Uses the Windows app light/dark preference |
-
-The embedded ChatGPT page controls its own appearance separately.
+See [Updater design](docs/UPDATES.md).
 
 ## Requirements
 
 - Windows 10 or Windows 11, 64-bit
 - ChatGPT/Codex desktop app with at least one saved Codex conversation
 - Microsoft Edge WebView2 Runtime
-- Git available for repository status and diff collection
-
-The release is self-contained for .NET; the .NET SDK is not required.
+- Git for repository status/diff collection
 
 ## Privacy and safety
 
-Before anything is placed into ChatGPT:
+Sidecar keeps context collection local until you explicitly prepare it for ChatGPT. Context is bounded, sensitive file categories are excluded, common credentials are redacted on a best-effort basis, and the complete prepared payload can be previewed first.
 
-- the selected Codex thread is shown explicitly
-- context size is bounded
-- `.env`, credential, key, dependency, build-output, traversal, and out-of-repository paths are excluded by default
-- common token and credential patterns are redacted on a best-effort basis
-- the complete prepared context can be previewed
-
-Nothing is typed into the Codex composer, and Sidecar does not resume or submit to Codex threads. The return handoff is copied to the clipboard for the user to review and paste manually.
+Sidecar does not type into the Codex composer, resume Codex threads, or submit Codex turns. The return handoff is copied to the clipboard for you to review and paste manually.
 
 ## Diagnostics
 
@@ -153,17 +116,30 @@ Startup: %LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\startup-crash.log
 Runtime: %LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\sidecar-dock.log
 ```
 
-A trusted signature removes the **Unknown publisher** label; SmartScreen reputation is a separate Windows signal for direct downloads.
+A trusted signature removes the **Unknown publisher** label. SmartScreen reputation for direct downloads is a separate Windows signal.
 
 ## Development
 
 ```powershell
-npm test
-npm run dock:test
-npm run dock:publish
+dotnet restore .\apps\Sidecar.Dock.Tests\Sidecar.Dock.Tests.csproj
+dotnet test .\apps\Sidecar.Dock.Tests\Sidecar.Dock.Tests.csproj --configuration Release
+dotnet run --project .\apps\Sidecar.Dock\Sidecar.Dock.csproj
 ```
 
-The Windows workflow builds and tests the native app, publishes a self-contained `Sidecar.exe`, verifies the embedded icon, requires a trusted signing provider, verifies the Authenticode signature, creates the clearly labeled portable release copy, and only then produces a public release.
+For a self-contained portable build:
+
+```powershell
+dotnet publish .\apps\Sidecar.Dock\Sidecar.Dock.csproj `
+  --configuration Release `
+  --runtime win-x64 `
+  --self-contained true `
+  -p:PublishSingleFile=true `
+  -p:IncludeNativeLibrariesForSelfExtract=true `
+  -p:EnableCompressionInSingleFile=true `
+  -o .\artifacts\Sidecar-win-x64
+```
+
+More detail: [Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md) · [Windows validation](docs/live-validation.md)
 
 ## License
 
