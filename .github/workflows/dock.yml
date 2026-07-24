@@ -13,25 +13,33 @@ on:
       - ".github/workflows/dock.yml"
 
 jobs:
-  build-test-publish:
+  native-diagnostic:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          show-progress: false
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-      - name: Restore
-        run: dotnet restore apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj
-      - name: Build native dock
-        run: dotnet build apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --no-restore
-      - name: Run native tests
-        run: dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=minimal"
-      - name: Publish portable Windows alpha
-        run: dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -o artifacts/Sidecar.Dock-win-x64
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Sidecar.Dock-win-x64
-          path: artifacts/Sidecar.Dock-win-x64
-          if-no-files-found: error
+      - name: Build and expose only native test failures
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          git init source | Out-Null
+          Set-Location source
+          git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
+          git fetch --quiet --depth 1 origin $env:GITHUB_REF
+          git checkout --quiet FETCH_HEAD
+
+          $project = 'apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj'
+          $log = Join-Path $env:RUNNER_TEMP 'sidecar-native-test.log'
+          dotnet restore $project *> $log
+          if ($LASTEXITCODE -eq 0) {
+            dotnet test $project --configuration Release --no-restore --logger "console;verbosity=minimal" *> $log
+          }
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host '=== SIDECAR NATIVE TEST FAILURE ==='
+            Get-Content $log |
+              Select-String -Pattern 'Failed |Error Message:|Stack Trace:|Assert\.|Expected:|Actual:|error CS|Test Run Failed|Total tests:|Failed:' -Context 0,5 |
+              ForEach-Object { $_.ToString() }
+            Write-Host '=== END SIDECAR NATIVE TEST FAILURE ==='
+            exit 1
+          }
+
+          Get-Content $log | Select-Object -Last 20
