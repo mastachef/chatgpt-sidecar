@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.8.1-alpha.3",
-  "description": "Native Windows ChatGPT companion dock with crash-safe startup and live diagnostics.",
+  "version": "0.8.1-alpha.4",
+  "description": "Native Windows ChatGPT companion dock with drag-to-attach window targeting and crash-safe startup.",
   "type": "module",
   "bin": {
     "codex-sidecar": "./bin/sidecar.mjs"
