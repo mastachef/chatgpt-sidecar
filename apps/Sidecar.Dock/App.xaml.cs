@@ -23,7 +23,9 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        _startupReporter.Record("application.startup.enter");
+        var startupSmokeTest = e.Args.Any(argument =>
+            string.Equals(argument, "--startup-smoke-test", StringComparison.OrdinalIgnoreCase));
+        _startupReporter.Record("application.startup.enter", ("smoke_test", startupSmokeTest));
 
         try
         {
@@ -31,9 +33,17 @@ public partial class App : Application
             ShutdownMode = ShutdownMode.OnMainWindowClose;
 
             var window = new MainWindow();
-            MainWindow = window;
             _startupReporter.Record("main_window.constructed");
 
+            if (startupSmokeTest)
+            {
+                _startupReporter.Record("startup.smoke_test.success");
+                window.Close();
+                Shutdown(0);
+                return;
+            }
+
+            MainWindow = window;
             window.SourceInitialized += (_, _) => _startupReporter.Record("main_window.source_initialized");
             window.Loaded += (_, _) => _startupReporter.Record("main_window.loaded");
             window.ContentRendered += (_, _) => _startupReporter.Record("main_window.content_rendered");
@@ -43,7 +53,7 @@ public partial class App : Application
         }
         catch (Exception exception)
         {
-            ReportFatal("application startup", exception, showDialog: true);
+            ReportFatal("application startup", exception, showDialog: !startupSmokeTest);
             Shutdown(-1);
         }
     }
