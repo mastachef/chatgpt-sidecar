@@ -27,7 +27,9 @@ jobs:
           $status = $LASTEXITCODE
           if ($status -ne 0) {
             Write-Host '=== NODE TEST FAILURE ==='
-            Get-Content $log | Select-Object -Last 120
+            Get-Content $log |
+              Select-String -Pattern '^(not ok|# fail|# tests|# pass)|failureType:|error:|stack:|location:|code:|expected:|actual:|operator:' -Context 0,4 |
+              ForEach-Object { $_.ToString() }
             Write-Host '=== END NODE TEST FAILURE ==='
             exit $status
           }
@@ -44,4 +46,4 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
-          Get-Content $log | Select-Object -Last 30
+          Get-Content $log | Select-Object -Last 20
