@@ -1,4 +1,5 @@
-https://i.imgur.com/xfmBoS9.jpeg
+![Project Screenshot](https://i.imgur.com/xfmBoS9.jpeg)
+
 
 # ChatGPT Sidecar
 
