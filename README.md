@@ -1,13 +1,14 @@
 ![Project Screenshot](https://i.imgur.com/xfmBoS9.jpeg)
 
-
 # ChatGPT Sidecar
 
 A Codex companion that offloads planning, debugging, review, and repository investigation to ChatGPT **before Codex starts a model turn**.
 
-## Why the global hook installer exists
+## Current reliability status
 
-Current Codex builds can install the Sidecar plugin and skill while failing to execute the plugin-local `hooks.json`. Sidecar v0.4 therefore keeps the plugin for discovery and `$sidecar`, but installs the executable `UserPromptSubmit` hook into the stable user-level Codex configuration at `~/.codex/hooks.json`.
+Sidecar v0.4.1 installs its executable hook at the user level in `~/.codex/hooks.json` because some Codex releases install plugin skills but fail to execute plugin-local hooks.
+
+A separate Codex Desktop regression has also been reported where valid user-level hooks are ignored by the desktop runtime. Therefore, **do not spend a Codex turn testing until the no-model preflight below confirms that your installed Codex CLI discovers and trusts the Sidecar hook.** A successful preflight still cannot prove a buggy Desktop build will dispatch it; it removes every uncertainty except that final desktop event.
 
 ## Install
 
@@ -36,9 +37,34 @@ The installer:
 
 Fully restart Codex after installation and trust the new global hook once when prompted.
 
-## Test
+## Zero-Codex-usage preflight
 
-The most deterministic first test is plain composer text:
+From the Sidecar checkout, run:
+
+```bash
+node ./bin/sidecar.mjs doctor
+node ./bin/sidecar.mjs verify-hook
+```
+
+`verify-hook` starts a local `codex app-server`, performs only the initialize handshake and `hooks/list`, and exits. It does **not** call `thread/start`, `turn/start`, or any model.
+
+A good result contains:
+
+```json
+{
+  "codexDiscoveredSidecarHook": true,
+  "codexReportsRunnableHook": true,
+  "modelTurnStarted": false
+}
+```
+
+Also inspect `hooks[0].trustStatus`. It should not be `untrusted` or `changed`.
+
+If discovery or trust is false, do not test inside Codex yet.
+
+## Live test after preflight
+
+The most deterministic first trigger is plain composer text:
 
 ```text
 sidecar: plan summarize this project and propose one harmless README improvement. Do not modify files.
@@ -61,7 +87,7 @@ $sidecar review
 /prompts:sidecar plan how to add account recovery
 ```
 
-Some Codex clients display an invoked skill as `Sidecar plan ...` rather than preserving `$sidecar`; v0.4 recognizes both forms.
+Some Codex clients display an invoked skill as `Sidecar plan ...` rather than preserving `$sidecar`; Sidecar recognizes both forms.
 
 A literal plugin-defined `/sidecar` command is not currently supported by Codex. The optional slash-style alias is `/prompts:sidecar`.
 
@@ -81,6 +107,7 @@ ChatGPT is instructed to finish with a compact **CODEX EXECUTION PACKET** that c
 
 ```bash
 node ./bin/sidecar.mjs doctor
+node ./bin/sidecar.mjs verify-hook
 node ./bin/sidecar.mjs install-global-hook
 node ./bin/sidecar.mjs uninstall-global-hook
 node ./bin/sidecar.mjs install-slash-alias
@@ -106,7 +133,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/ROADMAP.md`](docs/ROA
 
 ## Status
 
-**Version 0.4.** Uses a stable user-level hook to work around unreliable plugin-local hook discovery while preserving the Sidecar plugin and skill interface.
+**Version 0.4.1.** Adds a no-model `hooks/list` preflight so installation and trust can be verified without consuming a Codex turn.
 
 ## License
 
