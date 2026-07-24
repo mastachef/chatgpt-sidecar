@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.7.1",
-  "description": "Open a real ChatGPT Quick Chat with the active Codex conversation and repository context, without submitting another Codex turn.",
+  "version": "0.8.0-alpha.1",
+  "description": "Native Windows ChatGPT companion dock for active Codex conversation and repository context.",
   "author": {
     "name": "mastachef"
   },
@@ -11,17 +11,16 @@
   "keywords": [
     "codex",
     "chatgpt",
-    "quick-chat",
+    "windows",
+    "dock",
     "planning",
     "context",
     "sidecar"
   ],
-  "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
   "interface": {
-    "displayName": "Codex ChatGPT Sidecar",
-    "shortDescription": "Open ChatGPT Quick Chat with active Codex context",
-    "longDescription": "Sidecar installs a Windows global-hotkey listener that reads the active saved Codex conversation and repository locally, opens the ChatGPT app's real Quick Chat through Windows Accessibility, pastes the prepared context, and submits it without sending a message to the Codex thread.",
+    "displayName": "ChatGPT Sidecar Dock",
+    "shortDescription": "Dock ChatGPT beside Codex with local project context",
+    "longDescription": "Sidecar Dock is a native Windows companion app that magnetically attaches to the Codex desktop window, hosts a persistent ChatGPT session, reads saved Codex conversation and repository context locally, and prepares that context for user-reviewed sending without submitting another Codex prompt.",
     "developerName": "mastachef",
     "category": "Developer Tools",
     "capabilities": [
@@ -30,9 +29,8 @@
     ],
     "websiteURL": "https://github.com/mastachef/chatgpt-sidecar",
     "defaultPrompt": [
-      "Install the one-hotkey Sidecar Quick Chat workflow.",
-      "Use Ctrl+Alt+S to send active Codex context to ChatGPT.",
-      "Open a ChatGPT Quick Chat without another Codex turn."
+      "Open the ChatGPT Sidecar Dock installation instructions.",
+      "Explain how the native Sidecar Dock works beside Codex."
     ],
     "brandColor": "#10A37F"
   }
