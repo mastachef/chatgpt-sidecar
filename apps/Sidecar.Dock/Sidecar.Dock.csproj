@@ -7,7 +7,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Sidecar</AssemblyName>
     <RootNamespace>ChatGPT.Sidecar.Dock</RootNamespace>
+    <Product>Sidecar</Product>
+    <Title>Sidecar</Title>
+    <Description>Windows ChatGPT companion for Codex context, planning, review, and implementation handoff.</Description>
+    <Authors>mastachef</Authors>
+    <RepositoryUrl>https://github.com/mastachef/chatgpt-sidecar</RepositoryUrl>
     <Version>0.8.1-alpha.8</Version>
+    <AssemblyInformationalVersion>0.8.1-alpha.8</AssemblyInformationalVersion>
     <AssemblyVersion>0.8.1.8</AssemblyVersion>
     <FileVersion>0.8.1.8</FileVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
