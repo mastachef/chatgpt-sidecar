@@ -24,6 +24,17 @@ export function parseSidecarCommand(prompt) {
     return { command: "$sidecar", ...parsed };
   }
 
+  // Some Codex clients render an invoked skill as "Sidecar plan ..."
+  // rather than preserving the literal "$sidecar" token in the submitted text.
+  const renderedSkillMatch = /^sidecar\s+(plan|debug|review)(?:(?:\s+|:\s*)([\s\S]*))?$/i.exec(trimmed);
+  if (renderedSkillMatch) {
+    return {
+      command: "Sidecar",
+      mode: MODE_WORDS.get(renderedSkillMatch[1].toLowerCase()),
+      request: (renderedSkillMatch[2] || "").trim()
+    };
+  }
+
   const markerMatch = /^SIDECAR_HANDOFF\s*:\s*([\s\S]*)$/i.exec(trimmed);
   if (markerMatch) {
     const parsed = parseRequest(markerMatch[1]);
