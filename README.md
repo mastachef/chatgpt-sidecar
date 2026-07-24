@@ -6,7 +6,7 @@
 
 Sidecar is a native Windows companion for the ChatGPT/Codex desktop app. It stays put until you manually attach it to the exact Codex window you choose, reads a selected saved Codex conversation and bounded repository context locally, and prepares that context inside an embedded ChatGPT session without submitting another prompt to the Codex thread.
 
-> **Current release: v0.8.1-alpha.6**
+> **Current release: v0.8.1-alpha.7**
 
 ## Screenshots
 
@@ -52,8 +52,10 @@ Sidecar populates prompts but does **not** auto-submit them.
 - **Secret protection:** excludes sensitive file categories and redacts common credentials and tokens on a best-effort basis.
 - **Codex-style themes:** Codex Green, Codex Dark, Midnight, Light, and System.
 - **Fully themed window chrome:** the title bar, app icon, title text, minimize/maximize/close controls, cards, dropdowns, and footer all follow the selected Sidecar theme.
+- **Native frame theme sync:** Windows/DWM-owned border, caption, and title-text colors are synchronized to the active theme where Windows supports those attributes.
 - **Readable themed controls:** dropdown selections and popup items use explicit theme-aware text and backgrounds.
 - **Clean Windows app:** self-contained `Sidecar.exe` using the supplied chrome-car artwork.
+- **Release signing support:** GitHub Actions can Authenticode-sign and timestamp `Sidecar.exe` with Microsoft Artifact Signing before publication.
 - **Privacy-safe diagnostics:** startup and browser diagnostics exclude conversation and repository contents.
 
 ## Download
@@ -69,7 +71,7 @@ Put both files in a normal folder and run `Sidecar.exe`.
 
 ## Themes
 
-Choose a theme from the Sidecar header. The choice is saved automatically and applies to the entire native Sidecar shell, including the custom title bar.
+Choose a theme from the Sidecar header. The choice is saved automatically and applies to the entire native Sidecar shell, including the custom title bar and the Windows-owned frame colors that Sidecar can control.
 
 | Theme | Appearance |
 |---|---|
@@ -109,7 +111,7 @@ Startup: %LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\startup-crash.log
 Runtime: %LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\sidecar-dock.log
 ```
 
-This is an unsigned alpha build, so SmartScreen may show a warning.
+Windows shows **Unknown publisher** for unsigned builds. The release workflow now supports Microsoft Artifact Signing; once the repository's signing identity is configured, releases are Authenticode-signed and timestamped before upload. See [`docs/CODE_SIGNING.md`](docs/CODE_SIGNING.md). SmartScreen reputation is separate, so a newly signed build can still receive an initial reputation warning.
 
 ## Development
 
@@ -119,7 +121,7 @@ npm run dock:test
 npm run dock:publish
 ```
 
-The Windows workflow builds and tests the native app, publishes a self-contained `Sidecar.exe`, verifies the embedded icon, and launches the packaged executable in startup-smoke mode before producing a release.
+The Windows workflow builds and tests the native app, publishes a self-contained `Sidecar.exe`, verifies the embedded icon, optionally signs and verifies the executable when Artifact Signing is configured, and launches the packaged executable in startup-smoke mode before producing a release.
 
 ## License
 
