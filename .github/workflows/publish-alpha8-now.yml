@@ -1,0 +1,143 @@
+name: Publish Sidecar alpha.8 now
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/publish-alpha8-now.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          show-progress: false
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Validate release version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content apps/Sidecar.Dock/Sidecar.Dock.csproj -Raw
+          $version = $project.SelectSingleNode('/Project/PropertyGroup/Version').InnerText.Trim()
+          if ($version -ne '0.8.1-alpha.8') {
+            throw "This one-time publisher is only for 0.8.1-alpha.8; found $version."
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=v$version" >> $env:GITHUB_OUTPUT
+
+      - name: Restore and test
+        shell: pwsh
+        run: |
+          dotnet restore apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj
+          dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=minimal"
+
+      - name: Publish and smoke test
+        shell: pwsh
+        run: |
+          dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -o artifacts/published
+
+          $exe = 'artifacts/published/Sidecar.exe'
+          if (-not (Test-Path $exe)) { throw 'Sidecar.exe was not produced.' }
+
+          & $exe --startup-smoke-test
+          if ($LASTEXITCODE -ne 0) {
+            throw "Sidecar startup smoke test failed with exit code $LASTEXITCODE."
+          }
+
+          New-Item -ItemType Directory -Force artifacts/release | Out-Null
+          Copy-Item $exe artifacts/release/Sidecar.exe
+          Copy-Item $exe artifacts/release/Sidecar-Portable-win-x64.exe
+
+          $canonical = (Get-FileHash artifacts/release/Sidecar.exe -Algorithm SHA256).Hash
+          $portable = (Get-FileHash artifacts/release/Sidecar-Portable-win-x64.exe -Algorithm SHA256).Hash
+          if ($canonical -ne $portable) { throw 'Portable and canonical executables differ.' }
+
+          "SIDE_CAR_SHA256=$canonical" >> $env:GITHUB_ENV
+
+      - name: Create release notes
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          @"
+          ## Sidecar v$env:RELEASE_VERSION
+
+          Current public alpha build with the native WPF Sidecar app, secure in-app updater, themed native window chrome, portable release naming, and repository cleanup.
+
+          ### Downloads
+
+          - ``Sidecar-Portable-win-x64.exe`` — portable self-contained Windows build for normal/manual downloads
+          - ``Sidecar.exe`` — identical canonical executable used by the built-in updater
+
+          SHA-256: ``$env:SIDE_CAR_SHA256``
+
+          ### Included in alpha.8
+
+          - built-in GitHub Release update checker and installer
+          - SHA-256 verification plus Authenticode enforcement for future in-app updates
+          - themed native window/title-bar integration
+          - manual exact-window attach/docking
+          - Codex conversation and bounded repository context handoff
+          - cleaned repository with the retired Node/MCP/Quick Chat prototype removed
+          - consolidated native CI and release automation
+
+          **Signing status:** this interim alpha.8 public build is not Authenticode-signed yet. Windows can therefore still display ``Unknown publisher`` / SmartScreen warnings on the initial manual download. The normal release workflow remains configured to require trusted signing once SignPath or Microsoft Artifact Signing credentials are available.
+
+          Sidecar populates prompts but does not auto-submit them.
+          "@ | Set-Content artifacts/release-notes.md
+
+      - name: Publish and mark latest
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_TARGET: d11cbd1ceffc17953b238f00c4feb8125bfabdbb
+        run: |
+          gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY *> $null
+          $exists = $LASTEXITCODE -eq 0
+
+          if ($exists) {
+            $assets = gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --json assets --jq '.assets[].name'
+            foreach ($asset in $assets) {
+              if (-not [string]::IsNullOrWhiteSpace($asset)) {
+                gh release delete-asset $env:RELEASE_TAG $asset --repo $env:GITHUB_REPOSITORY --yes
+              }
+            }
+
+            gh release upload $env:RELEASE_TAG `
+              artifacts/release/Sidecar-Portable-win-x64.exe `
+              artifacts/release/Sidecar.exe `
+              --repo $env:GITHUB_REPOSITORY
+
+            gh release edit $env:RELEASE_TAG `
+              --repo $env:GITHUB_REPOSITORY `
+              --title "Sidecar $env:RELEASE_TAG" `
+              --notes-file artifacts/release-notes.md `
+              --latest
+          }
+          else {
+            gh release create $env:RELEASE_TAG `
+              artifacts/release/Sidecar-Portable-win-x64.exe `
+              artifacts/release/Sidecar.exe `
+              --repo $env:GITHUB_REPOSITORY `
+              --target $env:RELEASE_TARGET `
+              --title "Sidecar $env:RELEASE_TAG" `
+              --notes-file artifacts/release-notes.md `
+              --latest
+          }
