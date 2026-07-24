@@ -28,8 +28,51 @@ jobs:
         run: dotnet build apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --no-restore
       - name: Run native tests
         run: dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=minimal"
-      - name: Publish portable Windows alpha
-        run: dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -o artifacts/Sidecar.Dock-win-x64
+      - name: Publish single-file Windows alpha
+        run: >-
+          dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -o artifacts/Sidecar.Dock-win-x64
+      - name: Smoke test packaged executable
+        shell: pwsh
+        run: |
+          $publish = Join-Path $PWD 'artifacts/Sidecar.Dock-win-x64'
+          $exe = Join-Path $publish 'ChatGPT.Sidecar.Dock.exe'
+          $launcher = Join-Path $publish 'START_SIDECAR.cmd'
+          $readme = Join-Path $publish 'README-FIRST.txt'
+          $startupLog = Join-Path $env:LOCALAPPDATA 'ChatGPTSidecar/Diagnostics/startup-crash.log'
+
+          foreach ($required in @($exe, $launcher, $readme)) {
+            if (-not (Test-Path $required)) {
+              throw "Required published file missing: $required"
+            }
+          }
+
+          Remove-Item $startupLog -Force -ErrorAction SilentlyContinue
+          $process = Start-Process -FilePath $exe -ArgumentList '--startup-smoke-test' -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            if (Test-Path $startupLog) {
+              Get-Content $startupLog
+            }
+            throw "Packaged Sidecar startup smoke test exited with code $($process.ExitCode)."
+          }
+
+          if (-not (Test-Path $startupLog)) {
+            throw 'Packaged Sidecar did not create its startup report.'
+          }
+
+          $success = Select-String -Path $startupLog -Pattern 'startup.smoke_test.success' -Quiet
+          if (-not $success) {
+            Get-Content $startupLog
+            throw 'Packaged Sidecar did not reach successful MainWindow construction.'
+          }
+
+          Get-Item $exe | Select-Object Name, Length
       - uses: actions/upload-artifact@v4
         with:
           name: Sidecar.Dock-win-x64
