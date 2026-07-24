@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.8.1-alpha.3",
-  "description": "Native Windows ChatGPT companion dock with crash-safe startup and live diagnostics.",
+  "version": "0.8.1-alpha.4",
+  "description": "Native Windows ChatGPT companion dock with drag-to-attach window targeting and crash-safe startup.",
   "author": {
     "name": "mastachef"
   },
@@ -19,8 +19,8 @@
   ],
   "interface": {
     "displayName": "ChatGPT Sidecar Dock",
-    "shortDescription": "Dock ChatGPT beside Codex with selected local context",
-    "longDescription": "Sidecar Dock is a native Windows companion app that magnetically attaches to the Codex desktop window, hosts a persistent ChatGPT session, lets the user choose a saved root Codex thread, gathers bounded local context, and exposes crash-safe startup plus privacy-safe WebView and composer diagnostics without logging the shared context payload.",
+    "shortDescription": "Dock ChatGPT beside a manually selected Codex window",
+    "longDescription": "Sidecar Dock is a native Windows companion app that lets the user drag an Attach handle onto the exact Codex desktop window, pins itself to that window, hosts a persistent ChatGPT session, gathers bounded local Codex and repository context, and exposes crash-safe startup plus privacy-safe diagnostics.",
     "developerName": "mastachef",
     "category": "Developer Tools",
     "capabilities": [
@@ -30,7 +30,7 @@
     "websiteURL": "https://github.com/mastachef/chatgpt-sidecar",
     "defaultPrompt": [
       "Open the ChatGPT Sidecar Dock installation instructions.",
-      "Explain how to validate the native Sidecar Dock alpha."
+      "Explain how to drag Sidecar onto the Codex window."
     ],
     "brandColor": "#10A37F"
   }
