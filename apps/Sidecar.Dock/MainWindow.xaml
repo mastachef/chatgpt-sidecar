@@ -22,15 +22,30 @@
         <DockPanel LastChildFill="True">
           <StackPanel DockPanel.Dock="Left">
             <TextBlock Text="ChatGPT Sidecar" FontSize="18" FontWeight="SemiBold" />
-            <TextBlock x:Name="DetectedContextText" Text="Waiting for Codex..." Foreground="{StaticResource SecondaryTextBrush}" Margin="0,3,0,0" />
+            <TextBlock x:Name="DetectedContextText" Text="Waiting for Codex..." Foreground="{StaticResource SecondaryTextBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
           </StackPanel>
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
             <ToggleButton x:Name="FollowCodexToggle" Content="Follow Codex" IsChecked="True" Margin="8,0,0,0" Padding="10,5" Checked="FollowCodexToggle_OnChanged" Unchecked="FollowCodexToggle_OnChanged" />
-            <Button Content="Reload" Margin="8,0,0,0" Padding="10,5" Click="ReloadChatGpt_OnClick" />
+            <Button Content="Reload ChatGPT" Margin="8,0,0,0" Padding="10,5" Click="ReloadChatGpt_OnClick" />
           </StackPanel>
         </DockPanel>
 
         <Grid Margin="0,12,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="72" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Text="Thread" VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}" />
+          <ComboBox x:Name="ThreadBox"
+                    Grid.Column="1"
+                    MinWidth="220"
+                    MaxDropDownHeight="420"
+                    SelectionChanged="ThreadBox_OnSelectionChanged" />
+          <Button Grid.Column="2" Content="Refresh" Margin="8,0,0,0" Padding="10,5" Click="RefreshThreadsButton_OnClick" />
+        </Grid>
+
+        <Grid Margin="0,10,0,0">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="120" />
             <ColumnDefinition Width="*" />
