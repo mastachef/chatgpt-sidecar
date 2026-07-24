@@ -1,4 +1,4 @@
-![ChatGPT Sidecar](https://i.imgur.com/Tnpg6pn.png)
+![ChatGPT Sidecar](https://i.imgur.com/dWbP6nP.png)
 
 # ChatGPT Sidecar Dock
 
