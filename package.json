@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.8.0-alpha.1",
-  "description": "Native Windows ChatGPT companion dock for active Codex conversation and repository context.",
+  "version": "0.8.1-alpha.1",
+  "description": "Native Windows ChatGPT companion dock with explicit Codex thread selection and safe local context packaging.",
   "type": "module",
   "bin": {
     "codex-sidecar": "./bin/sidecar.mjs"
@@ -10,6 +10,7 @@
     "test": "node --test",
     "dock:run": "dotnet run --project ./apps/Sidecar.Dock/Sidecar.Dock.csproj",
     "dock:build": "dotnet build ./apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release",
+    "dock:test": "dotnet test ./apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release",
     "dock:publish": "dotnet publish ./apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --runtime win-x64 --self-contained true -o ./artifacts/Sidecar.Dock-win-x64",
     "legacy:mcp": "node ./mcp/server.mjs --stdio",
     "legacy:doctor": "node ./bin/sidecar.mjs doctor",
