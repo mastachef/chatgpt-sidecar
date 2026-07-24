@@ -82,9 +82,15 @@ export function parseCodexRollout(path) {
 
   const stats = statSync(path);
   const sessionId = meta.session_id || meta.id || null;
+  const parentThreadId = meta.parent_thread_id || null;
+  const agentRole = meta.agent_role || null;
+  const isSubagent = Boolean(parentThreadId || agentRole);
   return {
     path,
     sessionId,
+    parentThreadId,
+    agentRole,
+    isSubagent,
     cwd: meta.cwd || null,
     source: meta.source || null,
     originator: meta.originator || null,
@@ -94,6 +100,8 @@ export function parseCodexRollout(path) {
     thread: {
       id: meta.id || sessionId,
       sessionId,
+      parentThreadId,
+      agentRole,
       cwd: meta.cwd || null,
       source: meta.source || null,
       originator: meta.originator || null,
@@ -107,7 +115,8 @@ export function parseCodexRollout(path) {
 
 /**
  * Read the newest saved Codex rollout directly from CODEX_HOME without starting
- * Codex App Server, a thread, or a model turn.
+ * Codex App Server, a thread, or a model turn. Root sessions are preferred over
+ * newer subagent rollouts so the handoff tracks the user's visible Codex chat.
  */
 export function findLatestCodexSession(options = {}) {
   const codexHome = options.codexHome;
@@ -127,7 +136,8 @@ export function findLatestCodexSession(options = {}) {
     .sort((a, b) => b.mtimeMs - a.mtimeMs)
     .slice(0, options.maxCandidates || 250);
 
-  let newest = null;
+  let newestRoot = null;
+  let newestAny = null;
   for (const candidate of candidates) {
     let parsed;
     try {
@@ -136,9 +146,13 @@ export function findLatestCodexSession(options = {}) {
       continue;
     }
     if (!parsed.thread.messages.length) continue;
-    if (!newest) newest = parsed;
-    if (!requestedCwd) return parsed;
-    if (parsed.cwd && normalizedPath(parsed.cwd) === requestedCwd) return parsed;
+    if (!newestAny) newestAny = parsed;
+    if (!parsed.isSubagent && !newestRoot) newestRoot = parsed;
+
+    if (requestedCwd && parsed.cwd && normalizedPath(parsed.cwd) === requestedCwd) {
+      if (!parsed.isSubagent) return parsed;
+    }
+    if (!requestedCwd && !parsed.isSubagent) return parsed;
   }
-  return newest;
+  return newestRoot || newestAny;
 }
