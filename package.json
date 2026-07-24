@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Send the active Codex conversation and repository to a real ChatGPT Quick Chat with one Windows hotkey.",
   "type": "module",
   "bin": {
