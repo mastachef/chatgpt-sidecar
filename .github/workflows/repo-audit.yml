@@ -6,25 +6,21 @@ on:
       - main
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - name: Audit legacy references
+      - name: Inspect recent release workflow state
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          git init -q source
-          cd source
-          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
-          git fetch -q --depth 1 origin "$GITHUB_SHA"
-          git checkout -q FETCH_HEAD
-
-          echo '=== LEGACY/CLUTTER REFERENCES ==='
-          grep -RInE --exclude-dir=.git --exclude=repo-audit.yml \
-            'START_SIDECAR|README-FIRST|quickchat|sidecar\.mjs|mcp/server|hooks/hooks|skills/sidecar|prompts/sidecar|package\.json|npm test|node --test|legacy:' . || true
-
-          echo '=== TOP-LEVEL FILES/DIRS ==='
-          find . -maxdepth 2 -mindepth 1 -not -path './.git*' -printf '%p\n' | sort
+          echo '=== RECENT RELEASE RUNS ==='
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow release.yml --limit 8 --json databaseId,status,conclusion,headSha,createdAt,event,displayTitle
+          latest=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow release.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+          echo "=== LATEST RELEASE RUN $latest KEY LINES ==="
+          gh run view "$latest" --repo "$GITHUB_REPOSITORY" --log | grep -E 'Release signing mode|Trusted signing is not configured|Publish and mark latest|Verify Authenticode|Skip unsigned public release' || true
