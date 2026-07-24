@@ -12,27 +12,36 @@ jobs:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          show-progress: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Run Node tests with compact diagnostics
-        shell: bash
+      - name: Run Node tests and syntax checks
+        shell: pwsh
         run: |
-          set +e
-          npm test > node-test.log 2>&1
-          status=$?
-          if [ "$status" -ne 0 ]; then
-            echo "=== NODE TEST FAILURE ==="
-            tail -n 120 node-test.log
-            echo "=== END NODE TEST FAILURE ==="
-            exit "$status"
-          fi
-          tail -n 30 node-test.log
-      - run: node --check bin/sidecar.mjs
-      - run: node --check bin/sidecar-quickchat.mjs
-      - run: node --check bin/install-quickchat.mjs
-      - run: node --check src/local-session.mjs
-      - run: node --check mcp/server.mjs
+          $ErrorActionPreference = 'Continue'
+          git init source | Out-Null
+          Set-Location source
+          git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
+          git fetch --quiet --depth 1 origin $env:GITHUB_REF
+          git checkout --quiet FETCH_HEAD
+
+          $log = Join-Path $env:RUNNER_TEMP 'sidecar-node-test.log'
+          npm test *> $log
+          $status = $LASTEXITCODE
+          if ($status -ne 0) {
+            Write-Host '=== NODE TEST FAILURE ==='
+            Get-Content $log | Select-Object -Last 120
+            Write-Host '=== END NODE TEST FAILURE ==='
+            exit $status
+          }
+
+          $files = @(
+            'bin/sidecar.mjs',
+            'bin/sidecar-quickchat.mjs',
+            'bin/install-quickchat.mjs',
+            'src/local-session.mjs',
+            'mcp/server.mjs'
+          )
+          foreach ($file in $files) {
+            node --check $file
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+          Get-Content $log | Select-Object -Last 30
