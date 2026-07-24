@@ -1,20 +1,19 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.7.1",
-  "description": "Send the active Codex conversation and repository to a real ChatGPT Quick Chat with one Windows hotkey.",
+  "version": "0.8.0-alpha.1",
+  "description": "Native Windows ChatGPT companion dock for active Codex conversation and repository context.",
   "type": "module",
   "bin": {
     "codex-sidecar": "./bin/sidecar.mjs"
   },
   "scripts": {
     "test": "node --test",
-    "mcp": "node ./mcp/server.mjs --stdio",
-    "doctor": "node ./bin/sidecar.mjs doctor",
-    "install-quickchat": "node ./bin/install-quickchat.mjs",
-    "quickchat-list": "node ./bin/sidecar-quickchat.mjs list",
-    "install-launcher": "node ./bin/sidecar.mjs install-launcher",
-    "launch": "node ./bin/sidecar.mjs launch",
-    "bundle": "node ./bin/sidecar.mjs bundle"
+    "dock:run": "dotnet run --project ./apps/Sidecar.Dock/Sidecar.Dock.csproj",
+    "dock:build": "dotnet build ./apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release",
+    "dock:publish": "dotnet publish ./apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --runtime win-x64 --self-contained true -o ./artifacts/Sidecar.Dock-win-x64",
+    "legacy:mcp": "node ./mcp/server.mjs --stdio",
+    "legacy:doctor": "node ./bin/sidecar.mjs doctor",
+    "legacy:install-quickchat": "node ./bin/install-quickchat.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -22,8 +21,9 @@
   "keywords": [
     "codex",
     "chatgpt",
-    "quick-chat",
-    "windows-automation",
+    "wpf",
+    "webview2",
+    "windows",
     "sidecar",
     "developer-tools"
   ],
