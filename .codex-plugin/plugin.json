@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Open a real ChatGPT Quick Chat with the active Codex conversation and repository context, without submitting another Codex turn.",
   "author": {
     "name": "mastachef"
@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "Codex ChatGPT Sidecar",
     "shortDescription": "Open ChatGPT Quick Chat with active Codex context",
-    "longDescription": "Sidecar installs a Windows hotkey that reads the active saved Codex conversation and repository locally, opens the ChatGPT app's real Quick Chat through Windows Accessibility, pastes the prepared context, and submits it without sending a message to the Codex thread.",
+    "longDescription": "Sidecar installs a Windows global-hotkey listener that reads the active saved Codex conversation and repository locally, opens the ChatGPT app's real Quick Chat through Windows Accessibility, pastes the prepared context, and submits it without sending a message to the Codex thread.",
     "developerName": "mastachef",
     "category": "Developer Tools",
     "capabilities": [
