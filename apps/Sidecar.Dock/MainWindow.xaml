@@ -64,12 +64,11 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="Auto" />
           </Grid.ColumnDefinitions>
 
           <StackPanel Grid.Column="0" VerticalAlignment="Center">
             <TextBlock Text="DOCK TARGET" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
-            <TextBlock x:Name="DockTargetText" Text="Automatic detection" FontWeight="SemiBold" Margin="0,3,8,0" TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="DockTargetText" Text="No target selected" FontWeight="SemiBold" Margin="0,3,8,0" TextTrimming="CharacterEllipsis" />
           </StackPanel>
 
           <Border x:Name="AttachTargetHandle"
@@ -91,13 +90,12 @@
             </StackPanel>
           </Border>
 
-          <Button Grid.Column="2" Content="Auto" Margin="7,0,0,0" Click="AutoTargetButton_OnClick" />
-          <ToggleButton x:Name="FollowCodexToggle" Grid.Column="3" Content="Follow" IsChecked="True" Margin="7,0,0,0" Click="FollowCodexToggle_OnChanged" />
+          <ToggleButton x:Name="FollowCodexToggle" Grid.Column="2" Content="Follow" IsChecked="True" Margin="7,0,0,0" Click="FollowCodexToggle_OnChanged" />
 
           <TextBlock x:Name="AttachHintText"
                      Grid.Row="1"
-                     Grid.ColumnSpan="4"
-                     Text="Drag Attach onto the Codex window to pin Sidecar to that exact window."
+                     Grid.ColumnSpan="3"
+                     Text="Sidecar will not choose a window automatically. Drag Attach onto the exact Codex window you want it to follow."
                      Margin="0,9,0,0"
                      FontSize="10"
                      Foreground="{DynamicResource SecondaryTextBrush}"
