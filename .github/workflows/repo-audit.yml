@@ -12,9 +12,7 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - name: Inventory tail and release state
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Audit legacy references
         shell: bash
         run: |
           set -euo pipefail
@@ -24,14 +22,9 @@ jobs:
           git fetch -q --depth 1 origin "$GITHUB_SHA"
           git checkout -q FETCH_HEAD
 
-          echo '=== FILE INVENTORY TAIL ==='
-          git ls-files | tail -n +56
+          echo '=== LEGACY/CLUTTER REFERENCES ==='
+          grep -RInE --exclude-dir=.git --exclude=repo-audit.yml \
+            'START_SIDECAR|README-FIRST|quickchat|sidecar\.mjs|mcp/server|hooks/hooks|skills/sidecar|prompts/sidecar|package\.json|npm test|node --test|legacy:' . || true
 
-          echo '=== RELEASES ==='
-          gh release list --repo "$GITHUB_REPOSITORY" --limit 20 --json tagName,name,isLatest,isPrerelease,publishedAt
-
-          echo '=== RELEASE ASSETS ==='
-          for tag in $(gh release list --repo "$GITHUB_REPOSITORY" --limit 20 --json tagName --jq '.[].tagName'); do
-            echo "--- $tag ---"
-            gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json tagName,name,publishedAt,assets --jq '{tagName,name,publishedAt,assets:[.assets[]|{name,size,digest,downloadCount}]}'
-          done
+          echo '=== TOP-LEVEL FILES/DIRS ==='
+          find . -maxdepth 2 -mindepth 1 -not -path './.git*' -printf '%p\n' | sort
