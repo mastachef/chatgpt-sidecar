@@ -22,7 +22,9 @@ internal sealed class RepositoryContextCollector
         "global.json"
     ];
 
-    public RepositorySnapshot Collect(string workingDirectory)
+    public RepositorySnapshot Collect(
+        string workingDirectory,
+        IEnumerable<string>? conversationTexts = null)
     {
         var existingDirectory = Directory.Exists(workingDirectory)
             ? Path.GetFullPath(workingDirectory)
@@ -38,13 +40,19 @@ internal sealed class RepositoryContextCollector
             files[fileName] = ReadBoundedText(path, 12_000);
         }
 
+        var referencedFiles = ReferencedFileCollector
+            .Collect(root, conversationTexts ?? Array.Empty<string>())
+            .Where(file => !files.ContainsKey(file.Key))
+            .ToDictionary(file => file.Key, file => file.Value, StringComparer.OrdinalIgnoreCase);
+
         return new RepositorySnapshot(
             root,
             RunGit(root, "status --short --branch", 12_000),
             RunGit(root, "diff --no-ext-diff --unified=3", 24_000),
             RunGit(root, "diff --cached --no-ext-diff --unified=3", 18_000),
             RunGit(root, "log -5 --pretty=format:%h%x09%ad%x09%s --date=short", 8_000),
-            files);
+            files,
+            referencedFiles);
     }
 
     private static string RunGit(string workingDirectory, string arguments, int maxCharacters)
