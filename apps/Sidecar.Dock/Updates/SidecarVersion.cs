@@ -1,3 +1,5 @@
+using System.Reflection;
+
 namespace ChatGPT.Sidecar.Dock.Updates;
 
 internal readonly record struct SidecarVersion(
@@ -7,7 +9,22 @@ internal readonly record struct SidecarVersion(
     string? PrereleaseLabel,
     int PrereleaseNumber) : IComparable<SidecarVersion>
 {
-    internal const string Current = "0.8.1-alpha.8";
+    internal static string Current
+    {
+        get
+        {
+            var informationalVersion = typeof(SidecarVersion).Assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion;
+            if (string.IsNullOrWhiteSpace(informationalVersion))
+            {
+                return typeof(SidecarVersion).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+            }
+
+            var plusIndex = informationalVersion.IndexOf('+');
+            return plusIndex >= 0 ? informationalVersion[..plusIndex] : informationalVersion;
+        }
+    }
 
     internal static bool TryParse(string? value, out SidecarVersion version)
     {
