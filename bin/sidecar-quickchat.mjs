@@ -6,7 +6,7 @@ import { collectRepoContext } from "../src/repo-context.mjs";
 import { createHandoff } from "../src/handoff.mjs";
 import { copyToClipboard } from "../src/platform.mjs";
 import { findCodexSession, listRecentCodexSessions } from "../src/local-session.mjs";
-import { isoFileStamp } from "../src/utils.mjs";
+import { isoFileStamp, truncateMiddle } from "../src/utils.mjs";
 
 const command = process.argv[2] || "help";
 const MODES = new Set(["plan", "debug", "review", "general"]);
@@ -63,13 +63,13 @@ function prepareQuickChat(sessionId, rawMode, requestParts) {
     thread: session.thread
   });
 
-  const quickChatPrompt = [
+  const quickChatPrompt = truncateMiddle([
     "You are ChatGPT Quick Chat working beside an active Codex session.",
     "First give a concise state-of-work summary, then directly complete the requested planning, debugging, or review task.",
     "Do not claim you changed files. End with a compact CODEX EXECUTION PACKET that can be pasted back into Codex.",
     "",
     handoff
-  ].join("\n");
+  ].join("\n"), 80000);
 
   const handoffDir = join(repo.root, ".sidecar", "handoffs");
   mkdirSync(handoffDir, { recursive: true });
@@ -84,6 +84,7 @@ function prepareQuickChat(sessionId, rawMode, requestParts) {
     request,
     handoffPath,
     copied,
+    promptCharacters: quickChatPrompt.length,
     modelTurnStarted: false
   };
 }
