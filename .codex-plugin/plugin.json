@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.8.1-alpha.5",
+  "version": "0.8.1-alpha.6",
   "description": "A themed Windows ChatGPT companion for Codex that preserves precious Codex usage and creates detailed return-to-Codex handoffs.",
   "author": {
     "name": "mastachef"
