@@ -37,12 +37,12 @@ jobs:
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:EnableCompressionInSingleFile=true
-          -o artifacts/Sidecar.Dock-win-x64
+          -o artifacts/Sidecar-win-x64
       - name: Smoke test packaged executable
         shell: pwsh
         run: |
-          $publish = Join-Path $PWD 'artifacts/Sidecar.Dock-win-x64'
-          $exe = Join-Path $publish 'ChatGPT.Sidecar.Dock.exe'
+          $publish = Join-Path $PWD 'artifacts/Sidecar-win-x64'
+          $exe = Join-Path $publish 'Sidecar.exe'
           $launcher = Join-Path $publish 'START_SIDECAR.cmd'
           $readme = Join-Path $publish 'README-FIRST.txt'
           $startupLog = Join-Path $env:LOCALAPPDATA 'ChatGPTSidecar/Diagnostics/startup-crash.log'
@@ -75,6 +75,6 @@ jobs:
           Get-Item $exe | Select-Object Name, Length
       - uses: actions/upload-artifact@v4
         with:
-          name: Sidecar.Dock-win-x64
-          path: artifacts/Sidecar.Dock-win-x64
+          name: Sidecar-win-x64
+          path: artifacts/Sidecar-win-x64
           if-no-files-found: error
