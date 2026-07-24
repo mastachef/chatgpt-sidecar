@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace ChatGPT.Sidecar.Dock.CodexContext;
 
 internal static class CodexHandoffPromptBuilder
