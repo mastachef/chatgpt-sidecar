@@ -1,4 +1,0 @@
-{
-  "description": "Sidecar v0.5 uses an external launcher and intentionally registers no Codex hooks.",
-  "hooks": {}
-}

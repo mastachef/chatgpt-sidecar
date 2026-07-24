@@ -1,26 +1,38 @@
 # Roadmap
 
-## 0.1 — Rough MVP
+## Working today
 
-- [x] Intercept `/gpt`, `/gpt-plan`, `/gpt-debug`, and `/gpt-review`.
-- [x] Block the corresponding Codex prompt before a model turn.
-- [x] Read stored Codex history through App Server.
-- [x] Gather branch, status, diffs, commits, tracked files, and key manifests.
-- [x] Save and copy a structured ChatGPT handoff.
-- [x] Open ChatGPT automatically.
-- [ ] Validate the plugin inside the current ChatGPT desktop/Codex release on Windows.
+- [x] Native WPF Sidecar shell for Windows 10/11.
+- [x] Manual drag-to-attach targeting for the exact Codex window.
+- [x] Persistent embedded ChatGPT session through WebView2.
+- [x] Saved root Codex conversation selection.
+- [x] Bounded Git/repository context collection and referenced-file extraction.
+- [x] Context preview before preparing anything for ChatGPT.
+- [x] Best-effort secret filtering and sensitive-path exclusions.
+- [x] Plan, Debug, Review, and General handoff modes.
+- [x] Return-to-Codex implementation handoff and latest-reply copy.
+- [x] Native themed window chrome and persistent themes.
+- [x] Privacy-safe startup and WebView diagnostics.
+- [x] Secure in-app GitHub updater with digest and Authenticode verification.
+- [x] Trusted-signing release pipeline with SignPath and Microsoft Artifact Signing support.
 
-## 0.2 — Better context retrieval
+## Current release work
 
-- [ ] Track the last exported Codex turn.
-- [ ] Send conversation deltas instead of the entire thread.
-- [ ] Add ripgrep-based relevant-file selection from the request.
-- [ ] Detect secrets and redact likely credentials before export.
-- [ ] Add configurable size limits and ignored paths.
+- [ ] Complete trusted public signing setup and publish the first updater-capable signed release.
+- [ ] Finish Microsoft Store developer/product setup.
+- [ ] Add the Partner Center identity to an MSIX packaging project.
+- [ ] Produce and validate the first Store submission package.
+- [ ] Add Store listing metadata, screenshots, certification notes, and privacy/support links.
 
-## 0.3 — Two-way sidecar
+## Next improvements
 
-- [ ] Local session dashboard keyed by Codex thread ID.
-- [ ] Paste/import a ChatGPT execution packet with one click.
-- [ ] Optional Responses API mode for automatic planning.
-- [ ] Structured execution-packet validation.
+- [ ] Reduce repeated context by tracking what was already handed to ChatGPT for a selected thread.
+- [ ] Improve relevant-file selection for large repositories without expanding the default context budget.
+- [ ] Add clearer update/restart progress and recovery feedback.
+- [ ] Add optional diagnostics export for GitHub issues without exposing project content.
+- [ ] Continue hardening WebView2 composer/reply selectors against ChatGPT UI changes.
+
+## Distribution strategy
+
+- **GitHub Releases:** signed, self-contained portable x64 executable with the built-in updater.
+- **Microsoft Store:** MSIX installation with Store-managed updates.

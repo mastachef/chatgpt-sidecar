@@ -1,6 +1,0 @@
-interface:
-  display_name: "Sidecar"
-  short_description: "Hand work from Codex to ChatGPT"
-  default_prompt: "$sidecar plan the next implementation step"
-policy:
-  allow_implicit_invocation: false

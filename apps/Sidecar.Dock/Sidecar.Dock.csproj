@@ -26,8 +26,6 @@
 
   <ItemGroup>
     <Resource Include="Assets\Sidecar.ico" />
-    <None Update="START_SIDECAR.cmd" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <None Update="README-FIRST.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
   </ItemGroup>
 
   <ItemGroup>
