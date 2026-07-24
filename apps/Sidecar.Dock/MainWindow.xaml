@@ -24,12 +24,42 @@
             <TextBlock Text="ChatGPT Sidecar" FontSize="18" FontWeight="SemiBold" />
             <TextBlock x:Name="DetectedContextText" Text="Waiting for Codex..." Foreground="{StaticResource SecondaryTextBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
           </StackPanel>
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
-            <ToggleButton x:Name="FollowCodexToggle" Content="Follow Codex" IsChecked="True" Margin="8,0,0,0" Padding="10,5" Click="FollowCodexToggle_OnChanged" />
+          <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
             <Button Content="Reload ChatGPT" Margin="8,0,0,0" Padding="10,5" Click="ReloadChatGpt_OnClick" />
             <Button Content="Copy diagnostics" Margin="8,0,0,0" Padding="10,5" Click="CopyDiagnostics_OnClick" />
-          </StackPanel>
+          </WrapPanel>
         </DockPanel>
+
+        <Grid Margin="0,12,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock x:Name="DockTargetText" Text="Target: automatic detection" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="AttachHintText" Text="Drag Attach over the Codex window and release" Margin="0,2,8,0" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+          <Border x:Name="AttachTargetHandle"
+                  Grid.Column="1"
+                  Margin="8,0,0,0"
+                  Padding="11,6"
+                  CornerRadius="4"
+                  Background="#28333D"
+                  BorderBrush="#52616E"
+                  BorderThickness="1"
+                  Cursor="Cross"
+                  ToolTip="Hold and drag this handle over the real Codex window, then release"
+                  PreviewMouseLeftButtonDown="AttachTargetHandle_OnMouseLeftButtonDown"
+                  PreviewMouseMove="AttachTargetHandle_OnMouseMove"
+                  PreviewMouseLeftButtonUp="AttachTargetHandle_OnMouseLeftButtonUp"
+                  LostMouseCapture="AttachTargetHandle_OnLostMouseCapture">
+            <TextBlock Text="⠿ Attach" FontWeight="SemiBold" />
+          </Border>
+          <Button Grid.Column="2" Content="Auto target" Margin="8,0,0,0" Padding="10,5" Click="AutoTargetButton_OnClick" />
+          <ToggleButton x:Name="FollowCodexToggle" Grid.Column="3" Content="Follow" IsChecked="True" Margin="8,0,0,0" Padding="10,5" Click="FollowCodexToggle_OnChanged" />
+        </Grid>
 
         <Grid Margin="0,12,0,0">
           <Grid.ColumnDefinitions>
