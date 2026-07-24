@@ -2,121 +2,111 @@
 
 # ChatGPT Sidecar
 
-Use the active Codex conversation and repository inside **ChatGPT Quick Chat**, without asking the main Codex thread to spend another model turn on planning, debugging, review, or investigation.
+Send the active Codex conversation and repository to a **real ChatGPT Quick Chat** without submitting another prompt to the Codex thread.
 
-Sidecar v0.6 bundles a local, read-only MCP server with the Codex plugin. It reads saved Codex rollout files and repository state directly from your machine, then supplies that context to the ChatGPT conversation opened from Codex.
+## The workflow
 
-## Primary workflow: inside the ChatGPT Codex app
+After one-time setup on Windows:
 
-1. Install or refresh the **Codex ChatGPT Sidecar** plugin.
-2. Open the Codex project and conversation you are working on.
-3. Select **New chat** while in Codex to open ChatGPT Quick Chat.
-4. Invoke Sidecar with one of these prompts:
+1. Keep the Codex conversation you are working on visible.
+2. Press **Ctrl+Alt+S**.
+3. Sidecar shows a small request window with the newest Codex thread preselected.
+4. Choose `plan`, `debug`, `review`, or `general` and enter what ChatGPT should do.
+5. Sidecar reads the saved Codex thread and repository locally.
+6. It activates the ChatGPT desktop app's real **New chat** control through Windows Accessibility.
+7. ChatGPT Quick Chat opens inside the app, the context is pasted, and the message is submitted automatically.
 
-```text
-$sidecar plan the safest implementation for the feature we were discussing
-$sidecar debug the failure from my active Codex thread
-$sidecar review the current Codex discussion and repository changes
-```
-
-You can also select the Sidecar plugin/tool from the chat's plugin or tools menu and say:
-
-```text
-Use Sidecar to pull my active Codex context and work out the next implementation step.
-```
-
-Sidecar calls `sidecar_get_active_context`, which returns the latest saved root Codex thread, its repository path, Git status and diffs, recent commits, tracked files, and common project instruction or manifest files.
-
-## Why this avoids another Codex turn
-
-The MCP bridge reads files under `~/.codex/sessions` and the associated repository. It does not call `thread/start`, `thread/resume`, or `turn/start`, and it does not submit text to the main Codex composer.
-
-The final response stays in ChatGPT Quick Chat and ends with a compact **CODEX EXECUTION PACKET** that can be pasted into Codex only when implementation is ready.
-
-## Bundled tools
-
-- `sidecar_get_active_context` — fetch the newest root Codex conversation and repo context.
-- `sidecar_list_recent_threads` — list recent root conversations when several projects are active.
-- `sidecar_get_thread` — fetch a selected saved thread by ID.
-- `sidecar_get_repo_context` — fetch Git and project context for a selected directory.
-
-All tools are read-only.
+Nothing is entered into the Codex composer, so Sidecar does not start another Codex model turn.
 
 ## Install or update
 
-Install through the Codex plugin marketplace, or refresh the existing plugin from the Plugins screen to pull the latest source.
-
-For development from a checkout:
+Install or refresh the **Codex ChatGPT Sidecar** plugin, then run the one-time Windows setup from a checkout:
 
 ```powershell
 cd $HOME\chatgpt-sidecar
 git pull
-(Get-Content .\package.json | ConvertFrom-Json).version
+node .\bin\install-quickchat.mjs
 ```
 
-The version should be `0.6.0`.
+The installer:
 
-The plugin manifest bundles:
+- copies the current runtime to `%USERPROFILE%\.codex\sidecar-runtime`;
+- removes the obsolete Sidecar hook and prompt alias;
+- creates **ChatGPT Sidecar** shortcuts on the Desktop and Start Menu;
+- assigns **Ctrl+Alt+S**;
+- installs a `sidecar-quickchat` command as an optional fallback.
 
-```json
-{
-  "skills": "./skills/",
-  "mcpServers": "./.mcp.json"
-}
-```
+After setup, PowerShell is not part of the normal workflow.
 
-The MCP server starts automatically through:
+## What Sidecar sends to Quick Chat
 
-```json
-{
-  "command": "node",
-  "args": ["./mcp/server.mjs", "--stdio"]
-}
-```
+Sidecar prepares a structured local context packet containing:
 
-## Safe verification
+- the selected saved root Codex conversation;
+- the conversation's working directory;
+- Git branch, HEAD, remote, and status;
+- working-tree and staged diffs;
+- recent commits and tracked files;
+- `AGENTS.md`, README, and common manifests when present;
+- the planning, debugging, review, or general request entered by the user.
 
-Opening the MCP/tools panel in the Codex app should show a server named `chatgpt-sidecar` with these four tools. Inspecting the tool list does not submit a model turn.
-
-A protocol-level smoke test is also available from the checkout:
-
-```powershell
-node .\mcp\server.mjs --stdio
-```
-
-For normal use, do not run the server manually; the plugin starts it.
+ChatGPT is instructed to first summarize the state of work, then complete the request, and finish with a compact **CODEX EXECUTION PACKET** for implementation.
 
 ## Thread selection
 
-By default Sidecar chooses the most recently updated saved **root** Codex conversation and ignores newer subagent rollouts. When that is not the intended project, ChatGPT can call `sidecar_list_recent_threads` and re-run `sidecar_get_active_context` with the selected `session_id`.
+The Sidecar window lists recent saved root Codex threads and preselects the most recently updated one. This avoids accidentally selecting a newer subagent rollout and lets users switch projects before opening Quick Chat.
 
-## Fallback launcher
+## Why this avoids Codex usage
 
-The v0.5 external launcher remains available for clients that do not expose plugin MCP tools in Quick Chat:
+The hotkey workflow only:
 
-```powershell
-node .\bin\sidecar.mjs install-launcher
-sidecar plan "your request"
-```
+- reads files under `~/.codex/sessions`;
+- runs local Git read commands;
+- writes a Markdown handoff under `.sidecar/handoffs`;
+- uses Windows Accessibility to invoke the desktop app's **New chat** button;
+- pastes and submits into ChatGPT Quick Chat.
 
-This is a fallback, not the primary experience.
+It does not call `thread/start`, `thread/resume`, or `turn/start`, and it does not submit text to the Codex composer.
+
+## Bundled MCP bridge
+
+The plugin also includes an optional read-only MCP bridge:
+
+- `sidecar_get_active_context`
+- `sidecar_list_recent_threads`
+- `sidecar_get_thread`
+- `sidecar_get_repo_context`
+
+These tools remain useful for debugging and future native integration, but the primary user workflow is the one-hotkey Quick Chat automation.
 
 ## Requirements
 
-- ChatGPT desktop with Codex
+- Windows 10 or 11
+- The current ChatGPT desktop app with Codex and Quick Chat
 - Node.js 20+
 - Git
 - Saved Codex sessions under `CODEX_HOME/sessions` or `~/.codex/sessions`
+- Windows Accessibility access to the ChatGPT app
+
+## Troubleshooting
+
+Sidecar writes automation diagnostics to:
+
+```text
+%USERPROFILE%\.codex\sidecar-quickchat.log
+```
+
+If an app update changes the accessible name of the **New chat** button or Quick Chat composer, the prepared context remains on the clipboard and the log records which automation step failed.
 
 ## Privacy
 
-Sidecar reads local Codex rollout files and repository contents. Common credential patterns are redacted on a best-effort basis, but users should still avoid attaching secrets and should review sensitive context before relying on it outside the local machine.
+Sidecar reads local Codex rollout files and repository contents. Common credential patterns are redacted on a best-effort basis, but users should still avoid attaching secrets and should review sensitive context before sharing it.
 
 Repository and conversation contents are treated as untrusted data and cannot override the user's instructions.
 
 ## Status
 
-**Version 0.6.0.** Adds a bundled read-only MCP bridge and a Sidecar skill designed for ChatGPT Quick Chat inside the Codex desktop experience. The external launcher remains as a compatibility fallback.
+**Version 0.7.0.** Adds the complete Windows one-hotkey workflow: request window, recent-thread selection, local context preparation, real ChatGPT Quick Chat activation, automatic paste, and automatic submit.
 
 ## License
 
