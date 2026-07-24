@@ -3,7 +3,7 @@ using System.Text.Json;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 
-namespace ChatGPT.Sidecar.Dock.ChatGPT;
+namespace ChatGPT.Sidecar.Dock.Browser;
 
 internal sealed class ChatGptWebViewController
 {

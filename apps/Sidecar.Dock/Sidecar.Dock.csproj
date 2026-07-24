@@ -13,4 +13,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4078.44" />
   </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>ChatGPT.Sidecar.Dock.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>
