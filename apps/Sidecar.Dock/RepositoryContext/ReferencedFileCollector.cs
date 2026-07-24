@@ -49,7 +49,7 @@ internal static partial class ReferencedFileCollector
             foreach (Match match in PathReferenceRegex().Matches(text))
             {
                 var raw = match.Groups["path"].Value
-                    .Trim('`', '"', '\'', '(', ')', '[', ']', '{', '}', ',', ';', ':');
+                    .Trim('`', '"', '\'', '(', ')', '[', ']', '{', '}', ',', ';', ':', '.');
                 if (!string.IsNullOrWhiteSpace(raw))
                 {
                     candidates.Add(raw);
@@ -160,6 +160,8 @@ internal static partial class ReferencedFileCollector
         }
     }
 
-    [GeneratedRegex("(?<![A-Za-z0-9_.-])(?<path>(?:\\.?[A-Za-z0-9_@+.-]+[\\\\/])*(?:[A-Za-z0-9_@+.-]+\\.(?:csproj|sln|xaml|jsonl?|md|txt|m?js|cjs|tsx?|jsx|py|rs|go|java|kt|kts|cpp|c|h|hpp|css|scss|html|xml|ya?ml|toml|ini|cfg|conf|gradle|properties|sql|sh|ps1|bat|cmd)))", RegexOptions.IgnoreCase)]
+    // Extraction is intentionally broad. Extension, repository-boundary, traversal,
+    // blocked-directory, filename, size, and existence checks provide the security boundary.
+    [GeneratedRegex("(?<path>(?:(?:\\.{1,2})?[\\\\/])?(?:[A-Za-z0-9_@+.-]+[\\\\/])*[A-Za-z0-9_@+.-]+\\.[A-Za-z0-9]+)", RegexOptions.IgnoreCase)]
     private static partial Regex PathReferenceRegex();
 }
