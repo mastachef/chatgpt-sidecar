@@ -1,0 +1,137 @@
+name: Publish Sidecar Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/Sidecar.Dock/**"
+      - "apps/Sidecar.Dock.Tests/**"
+      - "package.json"
+      - "README.md"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          show-progress: false
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Read release version
+        id: version
+        shell: pwsh
+        run: |
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          $tag = "v$($package.version)"
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "title=Sidecar $tag" >> $env:GITHUB_OUTPUT
+
+      - name: Restore and test
+        shell: pwsh
+        run: |
+          dotnet restore apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj
+          dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=minimal"
+
+      - name: Publish Sidecar.exe
+        shell: pwsh
+        run: |
+          dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -o artifacts/published
+
+          New-Item -ItemType Directory -Force artifacts/release | Out-Null
+          Copy-Item artifacts/published/Sidecar.exe artifacts/release/Sidecar.exe
+          Copy-Item apps/Sidecar.Dock/README-FIRST.txt artifacts/release/README-FIRST.txt
+
+          if (-not (Test-Path artifacts/release/Sidecar.exe)) {
+            throw 'Sidecar.exe was not produced.'
+          }
+
+          Add-Type -AssemblyName System.Drawing
+          $icon = [System.Drawing.Icon]::ExtractAssociatedIcon((Resolve-Path artifacts/release/Sidecar.exe))
+          if ($null -eq $icon -or $icon.Width -lt 16 -or $icon.Height -lt 16) {
+            throw 'Sidecar.exe does not contain a valid application icon.'
+          }
+          $icon.Dispose()
+
+      - name: Create release notes
+        shell: pwsh
+        run: |
+          @'
+          ## Sidecar v0.8.1-alpha.4
+
+          A Windows ChatGPT companion designed to preserve valuable Codex usage by offloading planning, debugging, review, and repository analysis.
+
+          ### Included
+
+          - `Sidecar.exe` — self-contained 64-bit Windows application
+          - `README-FIRST.txt` — short setup and troubleshooting guide
+
+          ### Highlights
+
+          - drag-to-attach exact Codex window targeting
+          - Codex Green, Codex Dark, Midnight, Light, and System themes
+          - branded Sidecar car icon and clean executable naming
+          - saved Codex thread selection and bounded repository context
+          - preview-before-send workflow and best-effort secret redaction
+
+          This alpha populates the embedded ChatGPT composer but does not auto-submit.
+          '@ | Set-Content artifacts/release-notes.md
+
+      - name: Publish and mark latest
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_TITLE: ${{ steps.version.outputs.title }}
+        run: |
+          $exists = $false
+          gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            $exists = $true
+          }
+
+          if ($exists) {
+            $assets = gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --json assets --jq '.assets[].name'
+            foreach ($asset in $assets) {
+              if (-not [string]::IsNullOrWhiteSpace($asset)) {
+                gh release delete-asset $env:RELEASE_TAG $asset --repo $env:GITHUB_REPOSITORY --yes
+              }
+            }
+
+            gh release upload $env:RELEASE_TAG `
+              artifacts/release/Sidecar.exe `
+              artifacts/release/README-FIRST.txt `
+              --repo $env:GITHUB_REPOSITORY
+
+            gh release edit $env:RELEASE_TAG `
+              --repo $env:GITHUB_REPOSITORY `
+              --title $env:RELEASE_TITLE `
+              --notes-file artifacts/release-notes.md `
+              --latest
+          }
+          else {
+            gh release create $env:RELEASE_TAG `
+              artifacts/release/Sidecar.exe `
+              artifacts/release/README-FIRST.txt `
+              --repo $env:GITHUB_REPOSITORY `
+              --target $env:GITHUB_SHA `
+              --title $env:RELEASE_TITLE `
+              --notes-file artifacts/release-notes.md `
+              --latest
+          }

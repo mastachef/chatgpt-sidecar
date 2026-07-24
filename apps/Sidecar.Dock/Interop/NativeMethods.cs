@@ -8,6 +8,13 @@ internal static class NativeMethods
     internal delegate bool EnumWindowsProc(nint hWnd, nint lParam);
 
     [StructLayout(LayoutKind.Sequential)]
+    internal struct Point
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     internal struct Rect
     {
         public int Left;
@@ -32,10 +39,15 @@ internal static class NativeMethods
     internal const uint SwpNoActivate = 0x0010;
     internal const uint SwpNoZOrder = 0x0004;
     internal const uint SwpShowWindow = 0x0040;
+    internal const uint GaRoot = 2;
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool EnumWindows(EnumWindowsProc callback, nint lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool IsWindow(nint hWnd);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -44,6 +56,16 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool IsIconic(nint hWnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetCursorPos(out Point point);
+
+    [DllImport("user32.dll")]
+    internal static extern nint WindowFromPoint(Point point);
+
+    [DllImport("user32.dll")]
+    internal static extern nint GetAncestor(nint hWnd, uint flags);
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
