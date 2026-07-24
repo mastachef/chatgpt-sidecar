@@ -25,7 +25,7 @@
             <TextBlock x:Name="DetectedContextText" Text="Waiting for Codex..." Foreground="{StaticResource SecondaryTextBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
           </StackPanel>
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
-            <ToggleButton x:Name="FollowCodexToggle" Content="Follow Codex" IsChecked="True" Margin="8,0,0,0" Padding="10,5" Checked="FollowCodexToggle_OnChanged" Unchecked="FollowCodexToggle_OnChanged" />
+            <ToggleButton x:Name="FollowCodexToggle" Content="Follow Codex" IsChecked="True" Margin="8,0,0,0" Padding="10,5" Click="FollowCodexToggle_OnChanged" />
             <Button Content="Reload ChatGPT" Margin="8,0,0,0" Padding="10,5" Click="ReloadChatGpt_OnClick" />
             <Button Content="Copy diagnostics" Margin="8,0,0,0" Padding="10,5" Click="CopyDiagnostics_OnClick" />
           </StackPanel>

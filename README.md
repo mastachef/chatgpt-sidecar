@@ -4,7 +4,7 @@
 
 A native Windows companion panel that magnetically attaches to the ChatGPT/Codex desktop window, reads a selected saved Codex conversation and its repository locally, and prepares that context inside an embedded ChatGPT session without submitting another prompt to Codex.
 
-> **Current status: v0.8.1-alpha.2.** The native dock builds, passes automated Node and .NET tests, publishes a portable Windows artifact, and now includes privacy-safe live WebView/composer diagnostics. The remaining feasibility gate is validation on a real Windows ChatGPT session.
+> **Current status: v0.8.1-alpha.3.** The native dock builds, passes automated Node and .NET tests, publishes a self-contained single-file Windows artifact, and includes crash-safe startup plus privacy-safe WebView/composer diagnostics. The remaining feasibility gate is validation on a real Windows ChatGPT session.
 
 ## What the alpha does
 
@@ -20,16 +20,31 @@ A native Windows companion panel that magnetically attaches to the ChatGPT/Codex
 - Builds a previewable, size-limited context package.
 - Populates the ChatGPT composer for the user to review and send.
 - Falls back to the clipboard when the composer cannot be safely identified.
-- Records WebView runtime, navigation, process, and composer-probe diagnostics without logging context contents.
+- Records startup, WebView runtime, navigation, process, and composer-probe diagnostics without logging context contents.
 
 The alpha deliberately does **not** auto-submit. Populate-only behavior remains the safety gate until the embedded ChatGPT workflow proves stable.
 
-## Run the native alpha
+## Run the downloaded Windows alpha
+
+1. Extract the entire ZIP to a normal folder. Do not run the EXE from inside Windows' compressed-folder preview.
+2. Open the extracted folder.
+3. Run `ChatGPT.Sidecar.Dock.exe`.
+4. If the process appears to do nothing, run `START_SIDECAR.cmd`. It shows the exit code and opens the startup report automatically.
+
+The startup report is stored at:
+
+```text
+%LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\startup-crash.log
+```
+
+The published EXE is self-contained for .NET. Microsoft Edge WebView2 Runtime is still required for the embedded ChatGPT browser.
+
+## Run from source
 
 Requirements:
 
 - Windows 10 or 11
-- .NET 8 SDK for development builds
+- .NET 8 SDK
 - Microsoft Edge WebView2 Runtime
 - Git
 - At least one saved Codex session
@@ -63,7 +78,7 @@ Nothing is typed into the Codex composer and no Codex thread is resumed or start
 
 Follow [`docs/live-validation.md`](docs/live-validation.md) to validate docking, login persistence, thread selection, privacy, and composer population.
 
-Click **Copy diagnostics** after any failure. The copied report includes:
+Click **Copy diagnostics** after any in-app failure. The copied report includes:
 
 - app, .NET, Windows, and architecture versions
 - WebView2 runtime version
@@ -73,7 +88,7 @@ Click **Copy diagnostics** after any failure. The copied report includes:
 
 It does **not** include the Codex conversation, request, repository contents, Git diffs, ChatGPT messages, or full conversation URLs.
 
-The rolling local log is stored at:
+The rolling in-app log is stored at:
 
 ```text
 %LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\sidecar-dock.log
@@ -86,7 +101,7 @@ apps/
 ├── Sidecar.Dock/
 │   ├── ChatGPT/              Persistent WebView2 host and composer adapter
 │   ├── CodexContext/         Rollout parser, thread list, and package builder
-│   ├── Diagnostics/          Privacy-bounded runtime validation log
+│   ├── Diagnostics/          Startup and privacy-bounded runtime diagnostics
 │   ├── Docking/              Magnetic dock controller
 │   ├── Interop/              Win32 window APIs
 │   ├── RepositoryContext/    Git, manifests, and referenced-file collection
@@ -111,8 +126,9 @@ The `Sidecar Dock` GitHub Actions workflow:
 1. Restores the native projects.
 2. Builds the WPF application.
 3. Runs the .NET test suite.
-4. Publishes a self-contained `win-x64` build.
-5. Uploads `Sidecar.Dock-win-x64` as a workflow artifact.
+4. Publishes a self-contained single-file `win-x64` executable.
+5. Launches the packaged executable in startup-smoke mode and verifies successful `MainWindow` construction.
+6. Uploads `Sidecar.Dock-win-x64` as a workflow artifact.
 
 ## Feasibility gates
 
@@ -135,7 +151,7 @@ If ChatGPT blocks or behaves unreliably inside WebView2, the fallback architectu
 - Referenced files are restricted to bounded text files inside the selected repository.
 - Context is size-limited and previewable before it is placed into ChatGPT.
 - Sidecar does not automatically include `.env`, private-key, credential, dependency, build-output, or arbitrary untracked files.
-- Runtime diagnostics intentionally exclude context payloads and file contents.
+- Startup and runtime diagnostics intentionally exclude context payloads and file contents.
 - Repository and conversation content are treated as untrusted data, not instructions.
 
 Review sensitive context before sending it to ChatGPT.
@@ -149,6 +165,7 @@ The Node MCP, hook, shortcut, hotkey, and PowerShell UI-automation experiments r
 - `v0.8.0-alpha`: WebView2 and magnetic-dock feasibility scaffold
 - `v0.8.1-alpha.1`: root-thread picker, safe referenced files, redaction, tests, portable artifact
 - `v0.8.1-alpha.2`: live WebView/composer diagnostics and validation checklist
+- `v0.8.1-alpha.3`: crash-safe startup, single-file publish, and packaged startup smoke test
 - `v0.8.2-beta`: validated context-to-ChatGPT workflow and resilient selector profiles
 - `v0.9.0-beta`: installer, updates, and public testing
 - `v1.0.0`: signed stable Windows release

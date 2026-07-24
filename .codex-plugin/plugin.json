@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.8.1-alpha.2",
-  "description": "Native Windows ChatGPT companion dock with live WebView and composer diagnostics.",
+  "version": "0.8.1-alpha.3",
+  "description": "Native Windows ChatGPT companion dock with crash-safe startup and live diagnostics.",
   "author": {
     "name": "mastachef"
   },
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "ChatGPT Sidecar Dock",
     "shortDescription": "Dock ChatGPT beside Codex with selected local context",
-    "longDescription": "Sidecar Dock is a native Windows companion app that magnetically attaches to the Codex desktop window, hosts a persistent ChatGPT session, lets the user choose a saved root Codex thread, gathers bounded local context, and exposes privacy-safe WebView and composer diagnostics for live validation without logging the shared context payload.",
+    "longDescription": "Sidecar Dock is a native Windows companion app that magnetically attaches to the Codex desktop window, hosts a persistent ChatGPT session, lets the user choose a saved root Codex thread, gathers bounded local context, and exposes crash-safe startup plus privacy-safe WebView and composer diagnostics without logging the shared context payload.",
     "developerName": "mastachef",
     "category": "Developer Tools",
     "capabilities": [
