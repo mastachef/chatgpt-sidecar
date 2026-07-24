@@ -26,6 +26,15 @@ jobs:
         run: dotnet restore apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj
       - name: Build native dock
         run: dotnet build apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --no-restore
+      - name: Verify canonical Sidecar artwork
+        shell: pwsh
+        run: |
+          $icon = 'apps/Sidecar.Dock/Assets/Sidecar.ico'
+          $expected = 'b2eca7a7065f44de22cde4b5a9caec3ad6e048f21fc1c012654ba63bb882d144'
+          $actual = (Get-FileHash $icon -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) {
+            throw "Canonical Sidecar artwork mismatch. Expected $expected, found $actual."
+          }
       - name: Run native tests
         run: dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=minimal"
       - name: Publish single-file Windows alpha
