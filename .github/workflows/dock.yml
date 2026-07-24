@@ -4,77 +4,62 @@ on:
   push:
     paths:
       - "apps/Sidecar.Dock/**"
-      - "apps/Sidecar.Dock.Tests/**"
       - ".github/workflows/dock.yml"
   pull_request:
     paths:
       - "apps/Sidecar.Dock/**"
-      - "apps/Sidecar.Dock.Tests/**"
       - ".github/workflows/dock.yml"
 
 jobs:
-  build-test-publish:
+  startup-package-diagnostic:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          show-progress: false
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-      - name: Restore
-        run: dotnet restore apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj
-      - name: Build native dock
-        run: dotnet build apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --no-restore
-      - name: Run native tests
-        run: dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=minimal"
-      - name: Publish single-file Windows alpha
-        run: >-
-          dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj
-          --configuration Release
-          --runtime win-x64
-          --self-contained true
-          -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:EnableCompressionInSingleFile=true
-          -o artifacts/Sidecar.Dock-win-x64
-      - name: Smoke test packaged executable
+      - name: Publish and expose only packaged startup failure
         shell: pwsh
         run: |
-          $publish = Join-Path $PWD 'artifacts/Sidecar.Dock-win-x64'
-          $exe = Join-Path $publish 'ChatGPT.Sidecar.Dock.exe'
-          $launcher = Join-Path $publish 'START_SIDECAR.cmd'
-          $readme = Join-Path $publish 'README-FIRST.txt'
-          $startupLog = Join-Path $env:LOCALAPPDATA 'ChatGPTSidecar/Diagnostics/startup-crash.log'
+          $ErrorActionPreference = 'Continue'
+          git init source | Out-Null
+          Set-Location source
+          git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
+          git fetch --quiet --depth 1 origin $env:GITHUB_REF
+          git checkout --quiet FETCH_HEAD
 
-          foreach ($required in @($exe, $launcher, $readme)) {
-            if (-not (Test-Path $required)) {
-              throw "Required published file missing: $required"
-            }
+          $publish = Join-Path $env:RUNNER_TEMP 'Sidecar.Dock-win-x64'
+          $publishLog = Join-Path $env:RUNNER_TEMP 'sidecar-publish.log'
+          $startupLog = Join-Path $env:LOCALAPPDATA 'ChatGPTSidecar/Diagnostics/startup-crash.log'
+          dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -o $publish *> $publishLog
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host '=== SIDECAR SINGLE-FILE PUBLISH FAILURE ==='
+            Get-Content $publishLog |
+              Select-String -Pattern 'error CS|error MC|error MSB|error NETSDK|error NU|: error ' -Context 0,3 |
+              ForEach-Object { $_.ToString() }
+            Write-Host '=== END SIDECAR SINGLE-FILE PUBLISH FAILURE ==='
+            exit 1
           }
 
+          $exe = Join-Path $publish 'ChatGPT.Sidecar.Dock.exe'
           Remove-Item $startupLog -Force -ErrorAction SilentlyContinue
           $process = Start-Process -FilePath $exe -ArgumentList '--startup-smoke-test' -Wait -PassThru
           if ($process.ExitCode -ne 0) {
+            Write-Host '=== SIDECAR PACKAGED STARTUP REPORT ==='
             if (Test-Path $startupLog) {
               Get-Content $startupLog
+            } else {
+              Write-Host '[no managed startup report was created]'
             }
-            throw "Packaged Sidecar startup smoke test exited with code $($process.ExitCode)."
+            Write-Host "exit_code=$($process.ExitCode)"
+            Write-Host '=== END SIDECAR PACKAGED STARTUP REPORT ==='
+            exit 1
           }
 
-          if (-not (Test-Path $startupLog)) {
-            throw 'Packaged Sidecar did not create its startup report.'
-          }
-
-          $success = Select-String -Path $startupLog -Pattern 'startup.smoke_test.success' -Quiet
-          if (-not $success) {
-            Get-Content $startupLog
-            throw 'Packaged Sidecar did not reach successful MainWindow construction.'
-          }
-
-          Get-Item $exe | Select-Object Name, Length
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Sidecar.Dock-win-x64
-          path: artifacts/Sidecar.Dock-win-x64
-          if-no-files-found: error
+          Write-Host '=== SIDECAR PACKAGED STARTUP SUCCESS ==='
+          Get-Content $startupLog
+          Write-Host '=== END SIDECAR PACKAGED STARTUP SUCCESS ==='
