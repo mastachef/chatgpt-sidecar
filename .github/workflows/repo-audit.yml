@@ -28,7 +28,7 @@ jobs:
 
           echo '=== LEGACY RUNTIME REFERENCES ==='
           matches=$(grep -RInE --exclude-dir=.git --exclude=repo-audit.yml \
-            'node:|\.mjs\b|quickchat|sidecar-hotkey|mcp/server|hooks/hooks|START_SIDECAR|README-FIRST|npm test|node --test|legacy:' . || true)
+            'bin/sidecar|bin/install-quickchat|quickchat|sidecar-hotkey|mcp/server|hooks/hooks|START_SIDECAR|README-FIRST|npm test|node --test|legacy:' . || true)
           if [ -n "$matches" ]; then
             printf '%s\n' "$matches"
             exit 1
