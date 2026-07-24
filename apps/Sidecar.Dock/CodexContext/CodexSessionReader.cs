@@ -198,6 +198,16 @@ internal sealed class CodexSessionReader
 
         var previous = messages.LastOrDefault();
         if (previous is not null && previous.Role == cleanRole && previous.Text == cleanText) return;
+
+        if (timestamp.HasValue && messages.Any(message =>
+                message.Role == cleanRole
+                && message.Text == cleanText
+                && message.Timestamp.HasValue
+                && message.Timestamp.Value == timestamp.Value))
+        {
+            return;
+        }
+
         messages.Add(new CodexMessage(cleanRole, cleanText, timestamp));
     }
 
