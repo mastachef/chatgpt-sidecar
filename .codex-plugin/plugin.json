@@ -1,31 +1,39 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.5.0",
-  "description": "Read saved Codex sessions and hand them to ChatGPT without submitting a Codex model turn.",
+  "version": "0.6.0",
+  "description": "Bring the active Codex conversation and repository into ChatGPT Quick Chat without starting another Codex model turn.",
   "author": {
     "name": "mastachef"
   },
+  "homepage": "https://github.com/mastachef/chatgpt-sidecar",
   "repository": "https://github.com/mastachef/chatgpt-sidecar",
   "license": "MIT",
   "keywords": [
     "codex",
     "chatgpt",
+    "mcp",
     "planning",
     "context",
     "sidecar"
   ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Codex ChatGPT Sidecar",
-    "shortDescription": "Send saved Codex context to ChatGPT",
-    "longDescription": "Installs a hook-free external launcher that reads the latest saved Codex session and repository context, then opens a prepared ChatGPT handoff without submitting a Codex model turn.",
+    "shortDescription": "Use active Codex context in ChatGPT Quick Chat",
+    "longDescription": "Sidecar starts a local read-only MCP bridge that lets ChatGPT Quick Chat retrieve the active saved Codex conversation, repository state, diffs, and important project files without submitting another prompt to the Codex thread.",
     "developerName": "mastachef",
     "category": "Developer Tools",
     "capabilities": [
+      "Interactive",
       "Read"
     ],
     "websiteURL": "https://github.com/mastachef/chatgpt-sidecar",
     "defaultPrompt": [
-      "Install the external Sidecar launcher from this plugin's repository."
-    ]
+      "Use Sidecar to plan the next step from my active Codex chat.",
+      "Use Sidecar to debug the issue in my current Codex project.",
+      "Use Sidecar to review my current Codex thread and Git diff."
+    ],
+    "brandColor": "#10A37F"
   }
 }
