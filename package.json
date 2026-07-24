@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Offload Codex planning and repository analysis to ChatGPT without spending a Codex model turn.",
   "type": "module",
   "bin": {
@@ -9,6 +9,7 @@
   "scripts": {
     "test": "node --test",
     "doctor": "node ./bin/sidecar.mjs doctor",
+    "verify-hook": "node ./bin/sidecar.mjs verify-hook",
     "install-global-hook": "node ./bin/sidecar.mjs install-global-hook",
     "uninstall-global-hook": "node ./bin/sidecar.mjs uninstall-global-hook",
     "bundle": "node ./bin/sidecar.mjs bundle"
