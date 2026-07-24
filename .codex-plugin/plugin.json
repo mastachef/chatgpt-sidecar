@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.6.0",
-  "description": "Bring the active Codex conversation and repository into ChatGPT Quick Chat without starting another Codex model turn.",
+  "version": "0.7.0",
+  "description": "Open a real ChatGPT Quick Chat with the active Codex conversation and repository context, without submitting another Codex turn.",
   "author": {
     "name": "mastachef"
   },
@@ -11,7 +11,7 @@
   "keywords": [
     "codex",
     "chatgpt",
-    "mcp",
+    "quick-chat",
     "planning",
     "context",
     "sidecar"
@@ -20,8 +20,8 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Codex ChatGPT Sidecar",
-    "shortDescription": "Use active Codex context in ChatGPT Quick Chat",
-    "longDescription": "Sidecar starts a local read-only MCP bridge that lets ChatGPT Quick Chat retrieve the active saved Codex conversation, repository state, diffs, and important project files without submitting another prompt to the Codex thread.",
+    "shortDescription": "Open ChatGPT Quick Chat with active Codex context",
+    "longDescription": "Sidecar installs a Windows hotkey that reads the active saved Codex conversation and repository locally, opens the ChatGPT app's real Quick Chat through Windows Accessibility, pastes the prepared context, and submits it without sending a message to the Codex thread.",
     "developerName": "mastachef",
     "category": "Developer Tools",
     "capabilities": [
@@ -30,9 +30,9 @@
     ],
     "websiteURL": "https://github.com/mastachef/chatgpt-sidecar",
     "defaultPrompt": [
-      "Use Sidecar to plan the next step from my active Codex chat.",
-      "Use Sidecar to debug the issue in my current Codex project.",
-      "Use Sidecar to review my current Codex thread and Git diff."
+      "Install the one-hotkey Sidecar Quick Chat workflow.",
+      "Use Ctrl+Alt+S to send active Codex context to ChatGPT.",
+      "Open a ChatGPT Quick Chat without another Codex turn."
     ],
     "brandColor": "#10A37F"
   }
