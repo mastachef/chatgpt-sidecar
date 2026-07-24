@@ -202,6 +202,25 @@ jobs:
             throw 'Sidecar.exe has no signer certificate after the signing step.'
           }
 
+      - name: Create portable release copy
+        if: steps.signing.outputs.mode != 'none'
+        shell: pwsh
+        run: |
+          $source = 'artifacts/release/Sidecar.exe'
+          $portable = 'artifacts/release/Sidecar-Portable-win-x64.exe'
+          Copy-Item $source $portable -Force
+
+          $sourceHash = (Get-FileHash $source -Algorithm SHA256).Hash
+          $portableHash = (Get-FileHash $portable -Algorithm SHA256).Hash
+          if ($sourceHash -ne $portableHash) {
+            throw 'Portable release copy does not match the signed canonical Sidecar.exe.'
+          }
+
+          $signature = Get-AuthenticodeSignature $portable
+          if ($signature.Status -ne 'Valid') {
+            throw "Portable Sidecar signature validation failed: $($signature.Status) - $($signature.StatusMessage)"
+          }
+
       - name: Create release notes
         if: steps.signing.outputs.mode != 'none'
         shell: pwsh
@@ -210,10 +229,10 @@ jobs:
           SIGNING_MODE: ${{ steps.signing.outputs.mode }}
         run: |
           $signatureLine = if ($env:SIGNING_MODE -eq 'signpath') {
-            '- ``Sidecar.exe`` is Authenticode-signed and timestamped through SignPath.'
+            '- ``Sidecar.exe`` and the portable copy are Authenticode-signed and timestamped through SignPath.'
           }
           else {
-            '- ``Sidecar.exe`` is Authenticode-signed and timestamped with Microsoft Artifact Signing Public Trust.'
+            '- ``Sidecar.exe`` and the portable copy are Authenticode-signed and timestamped with Microsoft Artifact Signing Public Trust.'
           }
 
           @"
@@ -221,23 +240,25 @@ jobs:
 
           A Windows ChatGPT companion designed to preserve valuable Codex usage by offloading planning, debugging, review, and repository analysis—then returning the completed work to Codex as a detailed implementation handoff.
 
-          ### Included
+          ### Downloads
 
-          - ``Sidecar.exe`` — self-contained 64-bit Windows application
+          - ``Sidecar-Portable-win-x64.exe`` — clearly labeled portable single-file build; put it in any normal user-writable folder and run it
+          - ``Sidecar.exe`` — identical signed build retained as the canonical asset used by Sidecar's built-in updater
           - ``README-FIRST.txt`` — short setup, handoff, and troubleshooting guide
           $signatureLine
 
           ### Changes
 
+          - added a clearly labeled portable Windows executable to GitHub Releases
+          - retained ``Sidecar.exe`` so existing Sidecar installations can continue discovering and verifying updates
           - added a built-in update checker and installer backed by GitHub Releases
           - updates require both the GitHub release asset SHA-256 digest and a valid trusted Authenticode signature before replacement
           - the updater swaps the executable only after Sidecar exits, keeps rollback protection, and restarts the verified build
-          - refreshed the public README with real Codex + Sidecar and theme screenshots
           - retained themed window chrome, exact manual drag-to-attach docking, context preview, secret filtering, and populate-only safety
 
           ### Code signing policy
 
-          Every public ``Sidecar.exe`` must come from this repository's automated release build and pass trusted Authenticode verification before publication. See https://github.com/mastachef/chatgpt-sidecar/blob/main/docs/CODE_SIGNING.md
+          Every public Sidecar executable must come from this repository's automated release build and pass trusted Authenticode verification before publication. See https://github.com/mastachef/chatgpt-sidecar/blob/main/docs/CODE_SIGNING.md
 
           Sidecar populates prompts but does not auto-submit them.
           "@ | Set-Content artifacts/release-notes.md
@@ -265,6 +286,7 @@ jobs:
             }
 
             gh release upload $env:RELEASE_TAG `
+              artifacts/release/Sidecar-Portable-win-x64.exe `
               artifacts/release/Sidecar.exe `
               artifacts/release/README-FIRST.txt `
               --repo $env:GITHUB_REPOSITORY
@@ -277,6 +299,7 @@ jobs:
           }
           else {
             gh release create $env:RELEASE_TAG `
+              artifacts/release/Sidecar-Portable-win-x64.exe `
               artifacts/release/Sidecar.exe `
               artifacts/release/README-FIRST.txt `
               --repo $env:GITHUB_REPOSITORY `

@@ -76,16 +76,26 @@ Sidecar populates prompts but does **not** auto-submit them.
 
 Download the latest release from **[GitHub Releases](https://github.com/mastachef/chatgpt-sidecar/releases/latest)**.
 
-The public release contains only:
+For a normal manual download, choose:
 
-- `Sidecar.exe`
-- `README-FIRST.txt`
+- `Sidecar-Portable-win-x64.exe` — the clearly labeled portable single-file build; place it in any normal user-writable folder and run it directly.
 
-Put both files in a normal user-writable folder and run `Sidecar.exe`. After that first install, Sidecar can pull newer signed releases from GitHub using its built-in updater.
+The release also contains:
+
+- `Sidecar.exe` — the identical signed canonical executable retained for Sidecar's built-in updater.
+- `README-FIRST.txt` — short setup, handoff, and troubleshooting guidance.
+
+The portable build does not require an installer or a .NET SDK/runtime installation. After the first run, Sidecar can pull newer signed releases from GitHub using its built-in updater.
+
+### Microsoft Store
+
+Microsoft Store packaging is being prepared as a separate MSIX distribution path. The Store build will install/update through Microsoft while GitHub Releases remain the portable option.
+
+See **[Microsoft Store publishing plan](docs/MICROSOFT_STORE.md)**.
 
 ### Code signing policy
 
-Every public `Sidecar.exe` must be produced by the repository's automated release build and carry a valid trusted Authenticode signature before it can be published. If signing is unavailable or verification fails, the release workflow stops instead of publishing an unsigned executable. See **[Sidecar code signing policy](docs/CODE_SIGNING.md)** for the full policy and SignPath/Microsoft setup.
+Every public Sidecar executable must be produced by the repository's automated release build and carry a valid trusted Authenticode signature before it can be published. If signing is unavailable or verification fails, the release workflow stops instead of publishing an unsigned executable. See **[Sidecar code signing policy](docs/CODE_SIGNING.md)** for the full policy and SignPath/Microsoft setup.
 
 ## Updates
 
@@ -153,7 +163,7 @@ npm run dock:test
 npm run dock:publish
 ```
 
-The Windows workflow builds and tests the native app, publishes a self-contained `Sidecar.exe`, verifies the embedded icon, requires a trusted signing provider, verifies the Authenticode signature, and only then produces a public release.
+The Windows workflow builds and tests the native app, publishes a self-contained `Sidecar.exe`, verifies the embedded icon, requires a trusted signing provider, verifies the Authenticode signature, creates the clearly labeled portable release copy, and only then produces a public release.
 
 ## License
 
