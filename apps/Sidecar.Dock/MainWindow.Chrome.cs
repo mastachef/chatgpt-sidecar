@@ -1,10 +1,17 @@
 using System.Windows;
 using System.Windows.Input;
+using ChatGPT.Sidecar.Dock.UI;
 
 namespace ChatGPT.Sidecar.Dock;
 
 public partial class MainWindow
 {
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        NativeWindowTheme.Apply(this);
+    }
+
     private void TitleBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left)
