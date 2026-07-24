@@ -8,10 +8,11 @@ Sidecar's policy is:
 
 - `Sidecar.exe` is built from the public `mastachef/chatgpt-sidecar` repository by GitHub Actions.
 - Public release builds are produced from the release commit on `main`; the workflow does not accept a locally supplied replacement binary.
-- The Windows product name is explicitly set to **Sidecar** and release/version metadata is set by the project file for each release.
+- The Windows product name and release/version metadata come from the native project file.
 - The unsigned build is submitted to the configured trusted signing provider by the release workflow.
 - The resulting Authenticode signature is verified on the GitHub Actions Windows runner before upload.
-- If trusted signing is unavailable or signature validation fails, the workflow fails and does not publish `Sidecar.exe`.
+- If trusted signing is unavailable, build/test may succeed but the public executable release is skipped.
+- If signing is attempted and signature validation fails, publication is blocked.
 - Self-signed certificates are not accepted for public releases.
 - Changes to build, release, signing, or updater logic are source-controlled and should receive the same review attention as application code.
 
@@ -64,7 +65,8 @@ The endpoint must match the Artifact Signing region, for example `https://wus2.c
 
 - SignPath is used when all four SignPath secrets are present.
 - Otherwise Microsoft Artifact Signing is used when all six Microsoft/Azure secrets are present.
-- If neither trusted signing configuration is complete, the workflow **fails before publishing**. Sidecar will not intentionally publish another `Unknown publisher` executable.
+- If neither trusted signing configuration is complete, the build/test workflow can finish successfully but the public executable release is skipped.
+- Sidecar will not intentionally publish another `Unknown publisher` executable.
 - A valid trusted signature removes `Unknown publisher` and shows the certificate publisher identity instead.
 - SmartScreen reputation is a separate Windows signal. A newly signed non-Store binary can still receive a reputation warning while reputation develops.
 
