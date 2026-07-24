@@ -20,14 +20,9 @@
 
   <ItemGroup>
     <Resource Include="Assets\Sidecar.ico" />
-    <None Include="Assets\Sidecar.ico.b64" Visible="false" />
     <None Update="START_SIDECAR.cmd" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <None Update="README-FIRST.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
   </ItemGroup>
-
-  <Target Name="MaterializeCanonicalSidecarIcon" BeforeTargets="PrepareForBuild">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$payload = Get-Content -Raw '$(MSBuildProjectDirectory)\Assets\Sidecar.ico.b64'; $bytes = [Convert]::FromBase64String($payload.Trim()); [IO.File]::WriteAllBytes('$(MSBuildProjectDirectory)\Assets\Sidecar.ico', $bytes); $hash = (Get-FileHash '$(MSBuildProjectDirectory)\Assets\Sidecar.ico' -Algorithm SHA256).Hash.ToLowerInvariant(); if ($hash -ne 'b2eca7a7065f44de22cde4b5a9caec3ad6e048f21fc1c012654ba63bb882d144') { throw 'Canonical Sidecar icon hash mismatch.' }&quot;" />
-  </Target>
 
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
