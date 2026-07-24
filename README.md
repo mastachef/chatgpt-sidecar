@@ -83,6 +83,10 @@ The public release contains only:
 
 Put both files in a normal user-writable folder and run `Sidecar.exe`. After that first install, Sidecar can pull newer signed releases from GitHub using its built-in updater.
 
+### Code signing policy
+
+Every public `Sidecar.exe` must be produced by the repository's automated release build and carry a valid trusted Authenticode signature before it can be published. If signing is unavailable or verification fails, the release workflow stops instead of publishing an unsigned executable. See **[Sidecar code signing policy](docs/CODE_SIGNING.md)** for the full policy and SignPath/Microsoft setup.
+
 ## Updates
 
 Sidecar quietly checks recent GitHub Releases when it starts. You can also use the **Updates** button in the header to check manually.
@@ -139,7 +143,7 @@ Startup: %LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\startup-crash.log
 Runtime: %LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\sidecar-dock.log
 ```
 
-Public Sidecar releases are blocked unless `Sidecar.exe` has a valid trusted Authenticode signature. The workflow supports free SignPath Foundation/Open Source signing for eligible projects and Microsoft Artifact Signing Public Trust as an alternative. See [`docs/CODE_SIGNING.md`](docs/CODE_SIGNING.md). A trusted signature removes the **Unknown publisher** label; SmartScreen reputation is a separate Windows signal for direct downloads.
+A trusted signature removes the **Unknown publisher** label; SmartScreen reputation is a separate Windows signal for direct downloads.
 
 ## Development
 
