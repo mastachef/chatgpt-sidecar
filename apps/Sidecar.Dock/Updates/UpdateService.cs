@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -104,10 +105,11 @@ internal sealed class UpdateService
 
     internal async Task StageAndLaunchUpdateAsync(SidecarUpdate update, CancellationToken cancellationToken = default)
     {
-        var currentExecutable = Environment.ProcessPath;
-        if (string.IsNullOrWhiteSpace(currentExecutable) || !File.Exists(currentExecutable))
+        var currentExecutable = Environment.ProcessPath
+            ?? throw new InvalidOperationException("Sidecar could not determine the path of the running executable.");
+        if (!File.Exists(currentExecutable))
         {
-            throw new InvalidOperationException("Sidecar could not determine the path of the running executable.");
+            throw new InvalidOperationException("Sidecar could not find the running executable on disk.");
         }
 
         var updateDirectory = Path.Combine(
