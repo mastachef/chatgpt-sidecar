@@ -1,0 +1,30 @@
+name: Sidecar Dock
+
+on:
+  push:
+    paths:
+      - "apps/Sidecar.Dock/**"
+      - ".github/workflows/dock.yml"
+  pull_request:
+    paths:
+      - "apps/Sidecar.Dock/**"
+      - ".github/workflows/dock.yml"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Restore
+        run: dotnet restore apps/Sidecar.Dock/Sidecar.Dock.csproj
+      - name: Build
+        run: dotnet build apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --no-restore
+      - name: Publish portable alpha
+        run: dotnet publish apps/Sidecar.Dock/Sidecar.Dock.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -o artifacts/Sidecar.Dock-win-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sidecar.Dock-win-x64
+          path: artifacts/Sidecar.Dock-win-x64
