@@ -20,6 +20,19 @@ public sealed class ChatGptWebViewControllerTests
         Assert.Equal("div", result.ElementTag);
     }
 
+    [Fact]
+    public void ParseAssistantMessageResult_ReadsLatestReplyWithoutLosingText()
+    {
+        const string raw = "{\"success\":true,\"reason\":\"latest_assistant_message\",\"text\":\"Continue in Codex with the current diff.\",\"selector\":\"[data-message-author-role='assistant']\",\"candidateCount\":4}";
+
+        var result = ChatGptWebViewController.ParseAssistantMessageResult(raw);
+
+        Assert.NotNull(result);
+        Assert.True(result!.Success);
+        Assert.Equal("Continue in Codex with the current diff.", result.Text);
+        Assert.Equal(4, result.CandidateCount);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -28,5 +41,6 @@ public sealed class ChatGptWebViewControllerTests
     public void ParseComposerResult_RejectsMissingOrInvalidResults(string? raw)
     {
         Assert.Null(ChatGptWebViewController.ParseComposerResult(raw));
+        Assert.Null(ChatGptWebViewController.ParseAssistantMessageResult(raw));
     }
 }
