@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using ChatGPT.Sidecar.Dock.Browser;
 using ChatGPT.Sidecar.Dock.CodexContext;
+using ChatGPT.Sidecar.Dock.Diagnostics;
 using ChatGPT.Sidecar.Dock.Docking;
 using ChatGPT.Sidecar.Dock.RepositoryContext;
 using ChatGPT.Sidecar.Dock.WindowDetection;
@@ -14,6 +15,7 @@ public partial class MainWindow : Window
     private readonly CodexSessionReader _sessionReader = new();
     private readonly RepositoryContextCollector _repositoryCollector = new();
     private readonly ContextPackageBuilder _packageBuilder = new();
+    private readonly SidecarDiagnostics _diagnostics = new();
     private readonly DockController _dockController;
     private readonly ChatGptWebViewController _chatGptController;
     private string? _latestContextPackage;
@@ -21,28 +23,42 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _diagnostics.Record("app.constructed");
         _dockController = new DockController(this, new CodexWindowLocator());
-        _chatGptController = new ChatGptWebViewController(ChatGptWebView);
-        _dockController.StatusChanged += (_, status) => Dispatcher.Invoke(() => StatusText.Text = status);
+        _chatGptController = new ChatGptWebViewController(ChatGptWebView, _diagnostics);
+        _dockController.StatusChanged += (_, status) => Dispatcher.Invoke(() =>
+        {
+            StatusText.Text = status;
+            _diagnostics.Record("dock.status", ("status", status));
+        });
+        _chatGptController.StatusChanged += (_, status) => Dispatcher.Invoke(() => BrowserStatusText.Text = status);
         Loaded += MainWindow_OnLoaded;
-        Closed += (_, _) => _dockController.Dispose();
+        Closed += (_, _) =>
+        {
+            _diagnostics.Record("app.closed");
+            _dockController.Dispose();
+        };
     }
 
     private CodexSession? SelectedSession => (ThreadBox.SelectedItem as SessionChoice)?.Session;
 
     private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
+        _diagnostics.Record("app.loaded");
         try
         {
             StatusText.Text = "Loading ChatGPT...";
+            BrowserStatusText.Text = "WebView: initializing";
             await _chatGptController.InitializeAsync();
             StatusText.Text = "ChatGPT loaded. Sign in once if requested.";
         }
         catch (Exception exception)
         {
+            _diagnostics.RecordException("webview.initialize.failed", exception);
             StatusText.Text = "ChatGPT WebView failed to initialize";
+            BrowserStatusText.Text = $"WebView failed: {exception.GetType().Name}";
             MessageBox.Show(
-                $"WebView2 could not start. Install the Microsoft Edge WebView2 Runtime and restart Sidecar.\n\n{exception.Message}",
+                $"WebView2 could not start. Install the Microsoft Edge WebView2 Runtime and restart Sidecar.\n\n{exception.Message}\n\nDiagnostics: {_chatGptController.DiagnosticsLogPath}",
                 "ChatGPT Sidecar",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -62,19 +78,27 @@ public partial class MainWindow : Window
             _latestContextPackage = context.Package;
             ContextStatsText.Text = $"{context.Package.Length:N0} chars";
             UpdateDetectedContext(context.Session);
+            _diagnostics.Record(
+                "context.prepared",
+                ("characters", context.Package.Length),
+                ("messages", context.Session.Messages.Count),
+                ("project_files", context.Repository.ProjectFiles.Count),
+                ("referenced_files", context.Repository.ReferencedFiles.Count),
+                ("has_diff", !string.IsNullOrWhiteSpace(context.Repository.Diff)),
+                ("has_staged_diff", !string.IsNullOrWhiteSpace(context.Repository.StagedDiff)));
 
             StatusText.Text = "Populating ChatGPT composer...";
-            var populated = await _chatGptController.TryPopulateComposerAsync(context.Package);
-            if (populated)
+            var result = await _chatGptController.TryPopulateComposerAsync(context.Package);
+            if (result.Success)
             {
-                StatusText.Text = "Context populated. Review it in ChatGPT, then press Send.";
+                StatusText.Text = $"Context populated using {result.Selector}. Review it, then press Send.";
             }
             else
             {
                 Clipboard.SetText(context.Package);
-                StatusText.Text = "Composer not found. Context copied to clipboard.";
+                StatusText.Text = $"Composer unavailable ({result.Reason}). Context copied to clipboard.";
                 MessageBox.Show(
-                    "Sidecar could not locate ChatGPT's composer. The prepared context was copied to your clipboard so no data was typed into an unknown field.",
+                    $"Sidecar could not safely locate ChatGPT's composer ({result.Reason}). The prepared context was copied to your clipboard, and no text was entered into an unknown field.\n\nUse Copy diagnostics before reporting this failure.",
                     "ChatGPT Sidecar",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -82,6 +106,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
+            _diagnostics.RecordException("context.prepare.failed", exception);
             StatusText.Text = "Could not prepare Codex context";
             MessageBox.Show(exception.Message, "ChatGPT Sidecar", MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -100,6 +125,10 @@ public partial class MainWindow : Window
                 var context = BuildContextPackage();
                 _latestContextPackage = context.Package;
                 ContextStatsText.Text = $"{context.Package.Length:N0} chars";
+                _diagnostics.Record(
+                    "context.preview.generated",
+                    ("characters", context.Package.Length),
+                    ("messages", context.Session.Messages.Count));
             }
 
             var preview = new Window
@@ -125,6 +154,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
+            _diagnostics.RecordException("context.preview.failed", exception);
             MessageBox.Show(exception.Message, "ChatGPT Sidecar", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -164,6 +194,7 @@ public partial class MainWindow : Window
                 string.Equals(SessionIdentity(choice.Session), previousIdentity, StringComparison.OrdinalIgnoreCase))
             ?? choices.FirstOrDefault();
 
+        _diagnostics.Record("threads.refreshed", ("root_threads", choices.Length));
         if (ThreadBox.SelectedItem is SessionChoice choice)
         {
             UpdateDetectedContext(choice.Session);
@@ -204,6 +235,7 @@ public partial class MainWindow : Window
     private void FollowCodexToggle_OnChanged(object sender, RoutedEventArgs e)
     {
         _dockController.IsFollowing = FollowCodexToggle.IsChecked == true;
+        _diagnostics.Record("dock.follow.changed", ("enabled", _dockController.IsFollowing));
         StatusText.Text = _dockController.IsFollowing ? "Following Codex window" : "Sidecar detached";
     }
 
@@ -218,6 +250,25 @@ public partial class MainWindow : Window
         RefreshThreads();
     }
 
+    private void CopyDiagnostics_OnClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Clipboard.SetText(_chatGptController.BuildDiagnosticsReport());
+            _diagnostics.Record("diagnostics.copied");
+            StatusText.Text = "Diagnostics copied. Context text and repository contents were not included.";
+        }
+        catch (Exception exception)
+        {
+            _diagnostics.RecordException("diagnostics.copy.failed", exception);
+            MessageBox.Show(
+                $"Could not copy diagnostics. The log is stored at:\n{_chatGptController.DiagnosticsLogPath}\n\n{exception.Message}",
+                "ChatGPT Sidecar",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
     private void ThreadBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         _latestContextPackage = null;
@@ -225,6 +276,11 @@ public partial class MainWindow : Window
         if (SelectedSession is { } session)
         {
             UpdateDetectedContext(session);
+            _diagnostics.Record(
+                "thread.selected",
+                ("messages", session.Messages.Count),
+                ("has_working_directory", !string.IsNullOrWhiteSpace(session.WorkingDirectory)),
+                ("updated_age_minutes", Math.Max(0, (DateTimeOffset.UtcNow - session.UpdatedAt).TotalMinutes).ToString("F0")));
             StatusText.Text = "Selected Codex thread ready.";
         }
     }
