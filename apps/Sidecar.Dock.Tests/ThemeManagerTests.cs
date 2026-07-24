@@ -1,4 +1,5 @@
 using ChatGPT.Sidecar.Dock.UI;
+using Xunit;
 
 namespace ChatGPT.Sidecar.Dock.Tests;
 
