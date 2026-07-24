@@ -6,6 +6,7 @@ on:
       - main
       - "feat/**"
       - "fix/**"
+      - "chore/**"
   pull_request:
     branches:
       - main
@@ -26,21 +27,32 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Node tests
+      - name: Verify project metadata
         shell: pwsh
-        run: npm test
+        run: |
+          [xml]$project = Get-Content apps/Sidecar.Dock/Sidecar.Dock.csproj -Raw
+          $version = $project.SelectSingleNode('/Project/PropertyGroup/Version').InnerText.Trim()
+          $plugin = Get-Content .codex-plugin/plugin.json -Raw | ConvertFrom-Json
+          if ($plugin.version -ne $version) {
+            throw "Plugin version $($plugin.version) does not match native version $version."
+          }
 
-      - name: Restore native tests
-        shell: pwsh
+          $icon = 'apps/Sidecar.Dock/Assets/Sidecar.ico'
+          $expected = 'b2eca7a7065f44de22cde4b5a9caec3ad6e048f21fc1c012654ba63bb882d144'
+          $actual = (Get-FileHash $icon -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) {
+            throw "Canonical Sidecar artwork mismatch. Expected $expected, found $actual."
+          }
+
+      - name: Restore
         run: dotnet restore apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj
 
-      - name: Native tests
-        shell: pwsh
-        run: dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=normal"
+      - name: Test
+        run: >-
+          dotnet test apps/Sidecar.Dock.Tests/Sidecar.Dock.Tests.csproj
+          --configuration Release
+          --no-restore
+          --logger "console;verbosity=normal"
 
       - name: Publish smoke build
         shell: pwsh
@@ -54,11 +66,12 @@ jobs:
             -p:EnableCompressionInSingleFile=true `
             -o artifacts/ci-published
 
-          if (-not (Test-Path artifacts/ci-published/Sidecar.exe)) {
+          $exe = 'artifacts/ci-published/Sidecar.exe'
+          if (-not (Test-Path $exe)) {
             throw 'Sidecar.exe was not produced.'
           }
 
-          & artifacts/ci-published/Sidecar.exe --startup-smoke-test
+          & $exe --startup-smoke-test
           if ($LASTEXITCODE -ne 0) {
             throw "Sidecar startup smoke test failed with exit code $LASTEXITCODE."
           }
