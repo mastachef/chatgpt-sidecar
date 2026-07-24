@@ -30,6 +30,7 @@ public partial class MainWindow
         }
 
         ThemeManager.Apply(option.Id);
+        NativeWindowTheme.Apply(this);
         _diagnostics.Record("ui.theme.changed", ("theme", option.Id));
         StatusText.Text = $"Theme changed to {option.Name}.";
     }
