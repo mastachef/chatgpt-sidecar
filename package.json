@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.6.0",
-  "description": "Bring the active Codex conversation and repository into ChatGPT Quick Chat without starting another Codex model turn.",
+  "version": "0.7.0",
+  "description": "Send the active Codex conversation and repository to a real ChatGPT Quick Chat with one Windows hotkey.",
   "type": "module",
   "bin": {
     "codex-sidecar": "./bin/sidecar.mjs"
@@ -10,6 +10,8 @@
     "test": "node --test",
     "mcp": "node ./mcp/server.mjs --stdio",
     "doctor": "node ./bin/sidecar.mjs doctor",
+    "install-quickchat": "node ./bin/install-quickchat.mjs",
+    "quickchat-list": "node ./bin/sidecar-quickchat.mjs list",
     "install-launcher": "node ./bin/sidecar.mjs install-launcher",
     "launch": "node ./bin/sidecar.mjs launch",
     "bundle": "node ./bin/sidecar.mjs bundle"
@@ -20,8 +22,8 @@
   "keywords": [
     "codex",
     "chatgpt",
-    "mcp",
     "quick-chat",
+    "windows-automation",
     "sidecar",
     "developer-tools"
   ],
