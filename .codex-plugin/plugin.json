@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.4.1",
-  "description": "Use Sidecar to offload Codex planning and repository analysis to ChatGPT before a Codex model turn.",
+  "version": "0.5.0",
+  "description": "Read saved Codex sessions and hand them to ChatGPT without submitting a Codex model turn.",
   "author": {
     "name": "mastachef"
   },
@@ -16,8 +16,8 @@
   ],
   "interface": {
     "displayName": "Codex ChatGPT Sidecar",
-    "shortDescription": "Send Codex planning work to ChatGPT",
-    "longDescription": "Provides a Sidecar skill plus a stable global-hook installer and no-model preflight verifier for gathering Codex thread and repository context before a Codex model turn.",
+    "shortDescription": "Send saved Codex context to ChatGPT",
+    "longDescription": "Installs a hook-free external launcher that reads the latest saved Codex session and repository context, then opens a prepared ChatGPT handoff without submitting a Codex model turn.",
     "developerName": "mastachef",
     "category": "Developer Tools",
     "capabilities": [
@@ -25,10 +25,7 @@
     ],
     "websiteURL": "https://github.com/mastachef/chatgpt-sidecar",
     "defaultPrompt": [
-      "sidecar: plan the safest implementation for the next requested feature",
-      "$sidecar debug the current failure without changing files",
-      "$sidecar review the current working tree and staged changes"
+      "Install the external Sidecar launcher from this plugin's repository."
     ]
-  },
-  "skills": "./skills/"
+  }
 }
