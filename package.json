@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-sidecar",
-  "version": "0.4.1",
-  "description": "Offload Codex planning and repository analysis to ChatGPT without spending a Codex model turn.",
+  "version": "0.5.0",
+  "description": "Read saved Codex sessions and hand them to ChatGPT without submitting a Codex model turn.",
   "type": "module",
   "bin": {
     "codex-sidecar": "./bin/sidecar.mjs"
@@ -9,9 +9,8 @@
   "scripts": {
     "test": "node --test",
     "doctor": "node ./bin/sidecar.mjs doctor",
-    "verify-hook": "node ./bin/sidecar.mjs verify-hook",
-    "install-global-hook": "node ./bin/sidecar.mjs install-global-hook",
-    "uninstall-global-hook": "node ./bin/sidecar.mjs uninstall-global-hook",
+    "install-launcher": "node ./bin/sidecar.mjs install-launcher",
+    "launch": "node ./bin/sidecar.mjs launch",
     "bundle": "node ./bin/sidecar.mjs bundle"
   },
   "engines": {
@@ -20,7 +19,6 @@
   "keywords": [
     "codex",
     "chatgpt",
-    "plugin",
     "sidecar",
     "developer-tools"
   ],
