@@ -6,7 +6,7 @@
 
 Sidecar is a native Windows companion for the ChatGPT/Codex desktop app. It stays put until you manually attach it to the exact Codex window you choose, reads a selected saved Codex conversation and bounded repository context locally, and prepares that context inside an embedded ChatGPT session without submitting another prompt to the Codex thread.
 
-> **Current release: v0.8.1-alpha.5**
+> **Current release: v0.8.1-alpha.6**
 
 ## Screenshots
 
@@ -51,6 +51,7 @@ Sidecar populates prompts but does **not** auto-submit them.
 - **Copy latest reply:** copies the completed ChatGPT handoff directly to the clipboard.
 - **Secret protection:** excludes sensitive file categories and redacts common credentials and tokens on a best-effort basis.
 - **Codex-style themes:** Codex Green, Codex Dark, Midnight, Light, and System.
+- **Fully themed window chrome:** the title bar, app icon, title text, minimize/maximize/close controls, cards, dropdowns, and footer all follow the selected Sidecar theme.
 - **Readable themed controls:** dropdown selections and popup items use explicit theme-aware text and backgrounds.
 - **Clean Windows app:** self-contained `Sidecar.exe` using the supplied chrome-car artwork.
 - **Privacy-safe diagnostics:** startup and browser diagnostics exclude conversation and repository contents.
@@ -68,7 +69,7 @@ Put both files in a normal folder and run `Sidecar.exe`.
 
 ## Themes
 
-Choose a theme from the Sidecar header. The choice is saved automatically.
+Choose a theme from the Sidecar header. The choice is saved automatically and applies to the entire native Sidecar shell, including the custom title bar.
 
 | Theme | Appearance |
 |---|---|
@@ -78,7 +79,7 @@ Choose a theme from the Sidecar header. The choice is saved automatically.
 | Light | Bright high-contrast interface |
 | System | Uses the Windows app light/dark preference |
 
-The theme changes Sidecar's native shell. The embedded ChatGPT page controls its own appearance.
+The embedded ChatGPT page controls its own appearance separately.
 
 ## Requirements
 
