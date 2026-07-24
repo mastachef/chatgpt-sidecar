@@ -4,6 +4,13 @@ namespace ChatGPT.Sidecar.Dock.Tests;
 
 public sealed class SidecarVersionTests
 {
+    [Fact]
+    public void Current_assembly_version_is_parseable()
+    {
+        Assert.False(string.IsNullOrWhiteSpace(SidecarVersion.Current));
+        Assert.True(SidecarVersion.TryParse(SidecarVersion.Current, out _));
+    }
+
     [Theory]
     [InlineData("v0.8.1-alpha.7", "0.8.1-alpha.8")]
     [InlineData("0.8.1-alpha.8", "0.8.1-beta.1")]
