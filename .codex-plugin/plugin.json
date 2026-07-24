@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-sidecar",
   "version": "0.8.1-alpha.4",
-  "description": "Native Windows ChatGPT companion dock with drag-to-attach window targeting and crash-safe startup.",
+  "description": "A themed Windows ChatGPT companion for Codex that offloads planning, debugging, and repository analysis to help preserve precious Codex token usage.",
   "author": {
     "name": "mastachef"
   },
@@ -15,12 +15,13 @@
     "dock",
     "planning",
     "context",
+    "token-saver",
     "sidecar"
   ],
   "interface": {
-    "displayName": "ChatGPT Sidecar Dock",
-    "shortDescription": "Dock ChatGPT beside a manually selected Codex window",
-    "longDescription": "Sidecar Dock is a native Windows companion app that lets the user drag an Attach handle onto the exact Codex desktop window, pins itself to that window, hosts a persistent ChatGPT session, gathers bounded local Codex and repository context, and exposes crash-safe startup plus privacy-safe diagnostics.",
+    "displayName": "Sidecar",
+    "shortDescription": "Preserve Codex usage by offloading planning to ChatGPT",
+    "longDescription": "Sidecar is a native Windows companion app that lets the user drag an Attach handle onto the exact Codex desktop window, pins itself beside that window, hosts a persistent ChatGPT session, gathers bounded local Codex and repository context, and offloads planning, debugging, review, and repository analysis so valuable Codex turns can stay focused on implementation.",
     "developerName": "mastachef",
     "category": "Developer Tools",
     "capabilities": [
@@ -29,9 +30,9 @@
     ],
     "websiteURL": "https://github.com/mastachef/chatgpt-sidecar",
     "defaultPrompt": [
-      "Open the ChatGPT Sidecar Dock installation instructions.",
-      "Explain how to drag Sidecar onto the Codex window."
+      "Open the Sidecar installation instructions.",
+      "Explain how Sidecar can preserve Codex token usage."
     ],
-    "brandColor": "#10A37F"
+    "brandColor": "#74F59B"
   }
 }
