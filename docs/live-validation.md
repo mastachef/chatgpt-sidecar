@@ -1,95 +1,89 @@
 # Live Windows validation
 
-This checklist validates the two capabilities that headless GitHub Actions cannot prove: ChatGPT authentication inside WebView2 and safe composer population.
+This checklist covers behavior that headless CI cannot fully prove: exact-window docking, WebView2 authentication, visible composer population, and real desktop interaction.
 
 ## Before starting
 
-1. Open the current Codex desktop app and keep a normal root conversation visible.
-2. Make sure the repository has no secrets intentionally written into ordinary source files.
-3. Build or run Sidecar Dock:
+1. Open the current Codex desktop app and a normal root conversation.
+2. Build or run Sidecar:
 
 ```powershell
-cd $HOME\chatgpt-sidecar
-git pull
 dotnet run --project .\apps\Sidecar.Dock\Sidecar.Dock.csproj
 ```
 
-## Test 1: magnetic docking
+3. Use a repository that does not intentionally contain real credentials in ordinary source files.
 
-1. Confirm Sidecar appears beside the Codex window.
-2. Move and resize Codex.
-3. Minimize and restore Codex.
-4. Move Codex between monitors when available.
+## 1. Manual attach and docking
 
-Pass condition: Sidecar remains visible, on-screen, and aligned without rapid flicker.
+1. Start Sidecar without attaching it.
+2. Confirm it does not guess or automatically select a Codex window.
+3. Drag **Attach** onto the intended Codex window and release.
+4. Move and resize Codex.
+5. Minimize and restore Codex.
+6. Move Codex between monitors when available.
 
-## Test 2: embedded ChatGPT login
+Pass: Sidecar follows only the selected window, remains on-screen, and does not jump to another window.
 
-1. Sign into ChatGPT inside Sidecar when prompted.
-2. Confirm a normal blank ChatGPT conversation loads.
-3. Close Sidecar completely.
-4. Start Sidecar again.
+## 2. Embedded ChatGPT login
 
-Pass condition: the ChatGPT login persists after restart.
+1. Sign into ChatGPT inside Sidecar.
+2. Confirm a normal ChatGPT conversation loads.
+3. Close Sidecar completely and start it again.
 
-## Test 3: thread selection
+Pass: the ChatGPT session persists after restart.
 
-1. Open the **Thread** dropdown.
+## 3. Codex thread selection
+
+1. Open the thread selector.
 2. Confirm recent root Codex conversations appear.
-3. Confirm obvious worker/subagent sessions do not appear.
-4. Select the intended project and thread.
+3. Confirm obvious worker/subagent sessions are not offered as normal root threads.
+4. Select the intended project/thread.
 
-Pass condition: the title and project shown above the browser match the intended Codex work.
+Pass: the displayed project and conversation match the work you intended to hand off.
 
-## Test 4: preview and privacy
+## 4. Context preview and privacy
 
 1. Enter a harmless planning request.
-2. Click **Preview context**.
-3. Confirm the selected conversation, Git state, and referenced files are relevant.
-4. Search the preview for `.env`, `PRIVATE KEY`, `Authorization: Bearer`, and known local credentials.
+2. Select **Preview**.
+3. Confirm the selected conversation, Git state, diffs, and referenced files are relevant.
+4. Search the preview for `.env`, `PRIVATE KEY`, `Authorization: Bearer`, and any known test credential values.
 
-Pass condition: excluded files are absent and recognized credential values are replaced with redaction markers.
+Pass: excluded sensitive files are absent and recognized credential values are replaced with redaction markers.
 
-## Test 5: composer population
+## 5. ChatGPT composer population
 
 1. Close the preview.
-2. Click **Prepare in ChatGPT**.
-3. Do not press ChatGPT's Send button yet.
-4. Inspect the ChatGPT composer.
+2. Select **Prepare in ChatGPT**.
+3. Do not send the message yet.
+4. Inspect the visible ChatGPT composer.
 
-Pass condition: the prepared Sidecar context appears only in the visible ChatGPT composer. Sidecar must not type into search, login, navigation, or any unknown field.
+Pass: the prepared context appears in the ChatGPT composer and Sidecar does not auto-submit it or type into unrelated fields.
 
-## On failure
+## 6. Return-to-Codex handoff
 
-Click **Copy diagnostics** and paste the resulting report into the GitHub issue or development chat.
+1. Send the prepared request in ChatGPT and wait for the response.
+2. Select **Prepare handoff** and send that request in ChatGPT.
+3. After the implementation handoff is returned, select **Copy latest reply**.
+4. Paste into a text editor before using Codex.
 
-The report includes:
+Pass: the copied reply is the expected self-contained implementation handoff and contains no unexpected hidden/local data.
 
-- Sidecar and .NET versions
-- Windows and process architecture
-- WebView2 runtime version
-- sanitized navigation route categories
-- WebView process failures
-- composer selector, candidate count, and failure reason
+## 7. Update path
 
-The report does **not** include:
+Run this only with a trusted signed test/release pair.
 
-- the Codex conversation
-- the Sidecar request
-- repository file contents
-- Git diffs
-- ChatGPT message contents
-- full ChatGPT conversation URLs
+1. Start an older updater-capable Sidecar build.
+2. Check for updates.
+3. Confirm the newer release is detected.
+4. Install it through Sidecar.
 
-The raw local log is stored at:
+Pass: Sidecar verifies the release, exits, replaces the executable, restarts at the newer version, and leaves the original untouched when validation fails.
+
+## Diagnostics
 
 ```text
-%LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\sidecar-dock.log
+Startup: %LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\startup-crash.log
+Runtime: %LOCALAPPDATA%\ChatGPTSidecar\Diagnostics\sidecar-dock.log
 ```
 
-## Gate decision
-
-- All five tests pass: continue toward resilient selector profiles and installer work.
-- Login fails or is blocked: pivot to docking the official ChatGPT window.
-- Login works but composer population fails: update the selector/adapter layer using the copied diagnostic report.
-- Docking fails: fix Win32 window tracking before adding more ChatGPT features.
+Diagnostics should not contain Codex conversation text, repository file contents, Git diffs, or ChatGPT message contents.
