@@ -1,0 +1,12 @@
+<Application x:Class="ChatGPT.Sidecar.Dock.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+  <Application.Resources>
+    <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#101214" />
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#191C20" />
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F2F3F5" />
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#A9AFB7" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#10A37F" />
+  </Application.Resources>
+</Application>
