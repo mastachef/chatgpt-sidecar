@@ -1,18 +1,4 @@
 {
-  "description": "Routes explicit Sidecar skill, prompt-alias, and fallback triggers to ChatGPT before Codex starts a model turn.",
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${PLUGIN_ROOT}/src/hook.mjs\"",
-            "commandWindows": "node \"${PLUGIN_ROOT}\\src\\hook.mjs\"",
-            "timeout": 45,
-            "statusMessage": "Preparing ChatGPT sidecar handoff"
-          }
-        ]
-      }
-    ]
-  }
+  "description": "Sidecar v0.5 uses an external launcher and intentionally registers no Codex hooks.",
+  "hooks": {}
 }
