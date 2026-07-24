@@ -33,6 +33,7 @@ jobs:
         run: |
           $package = Get-Content package.json -Raw | ConvertFrom-Json
           $tag = "v$($package.version)"
+          "version=$($package.version)" >> $env:GITHUB_OUTPUT
           "tag=$tag" >> $env:GITHUB_OUTPUT
           "title=Sidecar $tag" >> $env:GITHUB_OUTPUT
 
@@ -62,6 +63,12 @@ jobs:
             throw 'Sidecar.exe was not produced.'
           }
 
+          $expectedArtworkHash = 'b2eca7a7065f44de22cde4b5a9caec3ad6e048f21fc1c012654ba63bb882d144'
+          $actualArtworkHash = (Get-FileHash apps/Sidecar.Dock/Assets/Sidecar.ico -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualArtworkHash -ne $expectedArtworkHash) {
+            throw "Canonical Sidecar artwork mismatch. Expected $expectedArtworkHash, found $actualArtworkHash."
+          }
+
           Add-Type -AssemblyName System.Drawing
           $icon = [System.Drawing.Icon]::ExtractAssociatedIcon((Resolve-Path artifacts/release/Sidecar.exe))
           if ($null -eq $icon -or $icon.Width -lt 16 -or $icon.Height -lt 16) {
@@ -69,29 +76,37 @@ jobs:
           }
           $icon.Dispose()
 
+          $unexpected = Get-ChildItem artifacts/release -File | Where-Object { $_.Name -notin @('Sidecar.exe', 'README-FIRST.txt') }
+          if ($unexpected) {
+            throw "Unexpected public release files: $($unexpected.Name -join ', ')"
+          }
+
       - name: Create release notes
         shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          @'
-          ## Sidecar v0.8.1-alpha.4
+          @"
+          ## Sidecar v$env:RELEASE_VERSION
 
-          A Windows ChatGPT companion designed to preserve valuable Codex usage by offloading planning, debugging, review, and repository analysis.
+          A Windows ChatGPT companion designed to preserve valuable Codex usage by offloading planning, debugging, review, and repository analysis—then returning the completed work to Codex as a detailed implementation handoff.
 
           ### Included
 
-          - `Sidecar.exe` — self-contained 64-bit Windows application
-          - `README-FIRST.txt` — short setup and troubleshooting guide
+          - ``Sidecar.exe`` — self-contained 64-bit Windows application
+          - ``README-FIRST.txt`` — short setup, handoff, and troubleshooting guide
 
-          ### Highlights
+          ### Changes
 
-          - drag-to-attach exact Codex window targeting
-          - Codex Green, Codex Dark, Midnight, Light, and System themes
-          - branded Sidecar car icon and clean executable naming
-          - saved Codex thread selection and bounded repository context
-          - preview-before-send workflow and best-effort secret redaction
+          - fixed invisible selected text and popup text in dark-theme dropdowns
+          - added **Prepare handoff** to ask ChatGPT for a detailed, implementation-ready Codex prompt
+          - added **Copy latest reply** to copy the completed handoff back to Codex
+          - handoff includes decisions, repository state, exact files, ordered steps, constraints, errors, tests, unresolved questions, and the first next action
+          - locked the EXE, taskbar, title-bar, and in-app icon to the exact supplied Sidecar car artwork
+          - retained exact drag-to-attach window targeting, saved Codex themes, context preview, secret filtering, and populate-only safety
 
-          This alpha populates the embedded ChatGPT composer but does not auto-submit.
-          '@ | Set-Content artifacts/release-notes.md
+          Sidecar populates prompts but does not auto-submit them.
+          "@ | Set-Content artifacts/release-notes.md
 
       - name: Publish and mark latest
         shell: pwsh
