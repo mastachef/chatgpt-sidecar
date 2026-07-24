@@ -13,6 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: write
   id-token: write
 
@@ -82,10 +83,23 @@ jobs:
             throw "Unexpected public release files: $($unexpected.Name -join ', ')"
           }
 
-      - name: Detect Artifact Signing configuration
+      - name: Upload unsigned build for trusted signing
+        id: unsigned_artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sidecar-unsigned-${{ github.sha }}
+          path: artifacts/release/Sidecar.exe
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Detect signing configuration
         id: signing
         shell: pwsh
         env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+          SIGNPATH_ORGANIZATION_ID: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          SIGNPATH_PROJECT_SLUG: ${{ secrets.SIGNPATH_PROJECT_SLUG }}
+          SIGNPATH_SIGNING_POLICY_SLUG: ${{ secrets.SIGNPATH_SIGNING_POLICY_SLUG }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -93,7 +107,15 @@ jobs:
           ARTIFACT_SIGNING_ACCOUNT_NAME: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT_NAME }}
           ARTIFACT_SIGNING_CERT_PROFILE_NAME: ${{ secrets.ARTIFACT_SIGNING_CERT_PROFILE_NAME }}
         run: |
-          $required = @(
+          $signPathRequired = @(
+            $env:SIGNPATH_API_TOKEN,
+            $env:SIGNPATH_ORGANIZATION_ID,
+            $env:SIGNPATH_PROJECT_SLUG,
+            $env:SIGNPATH_SIGNING_POLICY_SLUG
+          )
+          $signPathEnabled = ($signPathRequired | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -eq 0
+
+          $artifactSigningRequired = @(
             $env:AZURE_CLIENT_ID,
             $env:AZURE_TENANT_ID,
             $env:AZURE_SUBSCRIPTION_ID,
@@ -101,11 +123,45 @@ jobs:
             $env:ARTIFACT_SIGNING_ACCOUNT_NAME,
             $env:ARTIFACT_SIGNING_CERT_PROFILE_NAME
           )
-          $enabled = ($required | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -eq 0
-          "enabled=$($enabled.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          $artifactSigningEnabled = ($artifactSigningRequired | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -eq 0
+
+          if ($signPathEnabled) {
+            $mode = 'signpath'
+          }
+          elseif ($artifactSigningEnabled) {
+            $mode = 'artifact-signing'
+          }
+          else {
+            $mode = 'none'
+          }
+
+          "mode=$mode" >> $env:GITHUB_OUTPUT
+          Write-Host "Release signing mode: $mode"
+
+      - name: Sign Sidecar.exe with SignPath
+        if: steps.signing.outputs.mode == 'signpath'
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ secrets.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ secrets.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned_artifact.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: ${{ github.workspace }}\artifacts\signpath-signed
+
+      - name: Install SignPath-signed executable
+        if: steps.signing.outputs.mode == 'signpath'
+        shell: pwsh
+        run: |
+          $signed = Get-ChildItem artifacts/signpath-signed -Recurse -File -Filter Sidecar.exe | Select-Object -First 1
+          if ($null -eq $signed) {
+            throw 'SignPath completed but no signed Sidecar.exe was returned.'
+          }
+          Copy-Item $signed.FullName artifacts/release/Sidecar.exe -Force
 
       - name: Azure login for Artifact Signing
-        if: steps.signing.outputs.enabled == 'true'
+        if: steps.signing.outputs.mode == 'artifact-signing'
         uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -113,7 +169,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Sign Sidecar.exe with Microsoft Artifact Signing
-        if: steps.signing.outputs.enabled == 'true'
+        if: steps.signing.outputs.mode == 'artifact-signing'
         uses: azure/artifact-signing-action@v2
         with:
           endpoint: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
@@ -126,8 +182,20 @@ jobs:
           description: Sidecar
           description-url: https://github.com/mastachef/chatgpt-sidecar
 
+      - name: Block unsigned public release
+        if: steps.signing.outputs.mode == 'none'
+        shell: pwsh
+        run: |
+          throw @'
+          Public Sidecar releases must be Authenticode-signed. No trusted signing configuration is present, so this workflow will NOT publish another Unknown publisher executable.
+
+          Configure either:
+          1. SignPath Foundation/Open Source signing: SIGNPATH_API_TOKEN, SIGNPATH_ORGANIZATION_ID, SIGNPATH_PROJECT_SLUG, SIGNPATH_SIGNING_POLICY_SLUG
+          2. Microsoft Artifact Signing Public Trust: AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, ARTIFACT_SIGNING_ENDPOINT, ARTIFACT_SIGNING_ACCOUNT_NAME, ARTIFACT_SIGNING_CERT_PROFILE_NAME
+          '@
+
       - name: Verify Authenticode signature
-        if: steps.signing.outputs.enabled == 'true'
+        if: steps.signing.outputs.mode != 'none'
         shell: pwsh
         run: |
           $signature = Get-AuthenticodeSignature artifacts/release/Sidecar.exe
@@ -135,24 +203,22 @@ jobs:
           if ($signature.Status -ne 'Valid') {
             throw "Sidecar.exe signature validation failed: $($signature.Status) - $($signature.StatusMessage)"
           }
-
-      - name: Warn when release is unsigned
-        if: steps.signing.outputs.enabled != 'true'
-        shell: pwsh
-        run: |
-          Write-Warning 'Artifact Signing is not configured. This release will remain unsigned and Windows SmartScreen can show Unknown publisher. Configure the documented repository secrets to publish signed releases.'
+          if ($null -eq $signature.SignerCertificate) {
+            throw 'Sidecar.exe has no signer certificate after the signing step.'
+          }
 
       - name: Create release notes
+        if: steps.signing.outputs.mode != 'none'
         shell: pwsh
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
-          SIGNING_ENABLED: ${{ steps.signing.outputs.enabled }}
+          SIGNING_MODE: ${{ steps.signing.outputs.mode }}
         run: |
-          $signatureLine = if ($env:SIGNING_ENABLED -eq 'true') {
-            '- ``Sidecar.exe`` is Authenticode-signed and timestamped with Microsoft Artifact Signing.'
+          $signatureLine = if ($env:SIGNING_MODE -eq 'signpath') {
+            '- ``Sidecar.exe`` is Authenticode-signed and timestamped through SignPath.'
           }
           else {
-            '- This alpha artifact is currently unsigned, so Windows SmartScreen can display an Unknown publisher warning.'
+            '- ``Sidecar.exe`` is Authenticode-signed and timestamped with Microsoft Artifact Signing Public Trust.'
           }
 
           @"
@@ -170,14 +236,15 @@ jobs:
 
           - the custom Sidecar title bar follows the selected theme
           - Windows/DWM-owned frame, caption, border, and title text colors are synchronized to the active Sidecar theme where supported
-          - theme changes update the native frame immediately without restarting Sidecar
-          - release automation can Authenticode-sign and timestamp ``Sidecar.exe`` through Microsoft Artifact Signing when signing credentials are configured
+          - public GitHub releases are now blocked unless ``Sidecar.exe`` has a valid trusted Authenticode signature
+          - release automation supports both SignPath and Microsoft Artifact Signing Public Trust
           - retained exact manual drag-to-attach docking, context preview, secret filtering, and populate-only safety
 
           Sidecar populates prompts but does not auto-submit them.
           "@ | Set-Content artifacts/release-notes.md
 
       - name: Publish and mark latest
+        if: steps.signing.outputs.mode != 'none'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
