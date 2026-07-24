@@ -6,4 +6,5 @@ internal sealed record RepositorySnapshot(
     string Diff,
     string StagedDiff,
     string RecentCommits,
-    IReadOnlyDictionary<string, string> ProjectFiles);
+    IReadOnlyDictionary<string, string> ProjectFiles,
+    IReadOnlyDictionary<string, string> ReferencedFiles);
